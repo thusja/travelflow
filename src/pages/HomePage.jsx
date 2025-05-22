@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import Header from '@/components/Common/Header';
 import Hero from '@/components/Home/Hero';
 import Service from '@/components/Home/Service';
 import ServiceStats from '@/components/Home/ServiceStats';
