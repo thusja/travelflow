@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState('Hot Deals');
+  const navigate = useNavigate();
 
   const tabs = ['Hot Deals', 'Special Offers', 'Discounts'];
   const packageContent = {
@@ -52,12 +54,12 @@ const Packages = () => {
 
       {/* Discover More 버튼 */}
       <div className="mt-10 text-center">
-        <a
-          href="/"
+        <button
+          onClick={() => navigate('/package')}
           className="inline-block bg-emerald-600 text-white px-10 py-4 rounded hover:bg-emerald-500 transition duration-300 text-base font-semibold"
         >
           Discover More
-        </a>
+        </button>
       </div>
     </section>
   );
