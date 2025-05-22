@@ -17,7 +17,6 @@ const HomePage = () => {
 
   return (
     <div className="w-full overflow-x-hidden">
-      <Header />
       <Hero />
       <Service />
       <ServiceStats />
