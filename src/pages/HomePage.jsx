@@ -6,8 +6,6 @@ import Packages from '@/components/Home/Packages';
 import BookingSteps from '@/components/Home/BookingSteps';
 import Reviews from '@/components/Home/Reviews';
 import Subscription from '@/components/Home/Subscription';
-import Footer from '@/components/Common/Footer';
-import OnTheTop from '@/utils/OnTheTop';
 
 const HomePage = () => {
   useEffect(() => {
@@ -23,8 +21,6 @@ const HomePage = () => {
       <BookingSteps />
       <Reviews />
       <Subscription />
-      <Footer />
-      <OnTheTop />
     </div>
   );
 };
