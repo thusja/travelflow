@@ -3,22 +3,33 @@ import Navigation from './Navigation';
 import logo from '@/assets/images/logo.png';
 import { MdMenu } from 'react-icons/md';
 import { ImCross } from 'react-icons/im';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [openNav, setOpenNav] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    if(location.pathname === "/") {
+      window.scrollTo(0, 0);
+    }
+    else {
+      navigate("/");
+    }
+  };
 
   return (
     <>
       <header className="fixed top-0 left-0 w-full z-50 bg-white/60 backdrop-blur-sm shadow-md h-[80px] px-6 sm:px-20 flex items-center justify-between">
         {/* 로고 */}
-        <Link to="/" className="flex items-center">
+        <button onClick={handleLogoClick} className="flex items-center">
           <img
             src={logo}
             alt="logo"
             className="h-[110px] w-auto max-w-[160px] cursor-pointer"
           />
-        </Link>
+        </button>
 
         {/* 데스크탑 네비게이션 */}
         <div className="hidden sm:flex flex-1 justify-center">

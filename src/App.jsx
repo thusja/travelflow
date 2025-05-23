@@ -13,10 +13,12 @@ import UtilPage from '@/pages/UtilPage';
 import AboutPage from '@/pages/AboutPage';
 
 import Layout from '@/components/Common/Layout';
+import ScrollToTop from './components/Common/ScrollToTop';
 
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
