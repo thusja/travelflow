@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "도쿄 3일 자유여행",
+    "description": "도쿄 핵심 명소를 짧고 굵게 즐기는 자유 여행",
+    "price": 299000,
+    "thumbnail": "/images/tokyo.jpg",
+    "details": [
+      "하루 3대 관광지 방문",
+      "도쿄타워 야경 포함",
+      "온천 자유 이용권 포함"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "후쿠오카 온천 투어",
+    "description": "온천과 먹방을 동시에! 후쿠오카 3박 4일",
+    "price": 379000,
+    "thumbnail": "/images/fukuoka.jpg",
+    "details": [
+      "하루 3대 관광지 방문",
+      "쇼핑 쿠폰 포함",
+      "온천 자유 이용권 포함"
+    ]
+  }
+]
