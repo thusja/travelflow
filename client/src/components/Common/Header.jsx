@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navigation from './Navigation';
 import logo from '@/assets/images/logo.png';
 import { MdMenu } from 'react-icons/md';
 import { ImCross } from 'react-icons/im';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import MyProfileBox from "./MyProfileBox";
 
 const Header = () => {
   const [openNav, setOpenNav] = useState(false);
+  const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogoClick = () => {
-    if(location.pathname === "/") {
-      window.scrollTo(0, 0);
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
     }
-    else {
+  }, []);
+
+  const handleLogoClick = () => {
+    if (location.pathname === "/") {
+      window.scrollTo(0, 0);
+    } else {
       navigate("/");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    navigate("/");
   };
 
   return (
@@ -36,14 +51,19 @@ const Header = () => {
           <Navigation />
         </div>
 
-        {/* 로그인 + 모바일 아이콘 */}
+        {/* 로그인 or 프로필 */}
         <div className="flex items-center gap-4">
-          <Link
-            to="/Login"
-            className="bg-black text-white px-4 py-2 rounded-md font-semibold text-lg hover:bg-white hover:text-black transition mr-2 sm:mr-4"
-          >
-            Login
-          </Link>
+          {user ? (
+            <MyProfileBox user={user} onLogout={handleLogout} />
+          ) : (
+            <Link
+              to="/Login"
+              className="bg-black text-white px-4 py-2 rounded-md font-semibold text-lg hover:bg-white hover:text-black transition mr-2 sm:mr-4"
+            >
+              Login
+            </Link>
+          )}
+          {/* 모바일 메뉴 토글 */}
           <div className="sm:hidden">
             {openNav ? (
               <ImCross onClick={() => setOpenNav(false)} size="30" className="cursor-pointer" />
@@ -61,17 +81,21 @@ const Header = () => {
           <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-sky-200 to-purple-200">
             <img src={logo} alt="logo" className="h-10" />
             <div className="flex items-center gap-3">
-              <Link
-                to="/Login"
-                className="bg-black text-white 
-                px-4 py-2 text-lg font-semibold rounded-md 
-                hover:bg-white hover:text-black transition
-                mr-2 sm:mr-4
-                max-sm:text-sm max-sm:px-3 max-sm:py-1"
-              >
-                Login
-              </Link>
-
+              {user ? (
+                <button
+                  onClick={handleLogout}
+                  className="text-sm bg-black text-white px-4 py-2 rounded-md hover:bg-white hover:text-black transition"
+                >
+                  로그아웃
+                </button>
+              ) : (
+                <Link
+                  to="/Login"
+                  className="bg-black text-white px-4 py-2 text-lg font-semibold rounded-md hover:bg-white hover:text-black transition mr-2 sm:mr-4 max-sm:text-sm max-sm:px-3 max-sm:py-1"
+                >
+                  Login
+                </Link>
+              )}
               <ImCross
                 onClick={() => setOpenNav(false)}
                 className="text-2xl cursor-pointer"

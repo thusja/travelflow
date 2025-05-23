@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const SignUpForm = () => {
+  const [userId, setUserId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,7 +47,7 @@ const SignUpForm = () => {
     }
   };
 
-  const handleSignUpClick = () => {
+  const handleSignUpClick = async () => {
     if (password.length < 4) {
       setErrorMessage('패스워드의 최소길이는 4자리 입니다.');
       return;
@@ -58,7 +60,36 @@ const SignUpForm = () => {
 
     setErrorMessage('');
     setConfirmError('');
-    alert('회원가입이 완료되었습니다!');
+
+    const userData = {
+      userId,
+      name,
+      email,
+      password,
+      phone: phoneNumber,
+    };
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json"},
+        body: JSON.stringify(userData),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('회원가입이 완료되었습니다!');
+
+        window.location.href = "/login";
+      } else {
+        alert('회원가입 실패: ' + data.message);
+      }
+    }
+    catch {
+      console.error("회원가입 에러 : ", err);
+      alert("서버 통신 에러");
+    }
   };
 
   return (
@@ -72,6 +103,8 @@ const SignUpForm = () => {
         <label className="text-sm font-medium text-left">ID</label>
         <input
           type="text"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
           placeholder="Enter your ID"
           className="border border-gray-300 rounded-md px-4 py-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
@@ -148,6 +181,8 @@ const SignUpForm = () => {
         <label className="text-sm font-medium text-left">Email</label>
         <input
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
           className="border border-gray-300 rounded-md px-4 py-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />

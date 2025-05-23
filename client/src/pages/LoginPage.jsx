@@ -4,9 +4,33 @@ import LoginForm from '@/components/Login/LoginForm';
 import SocialLogin from '@/components/Login/SocialLogin';
 
 const LoginPage = () => {
-  const handleLogin = ({ email, password }) => {
-    console.log("로그인 요청:", { email, password });
-    // 실제 로그인 처리 API 연동 등
+  const handleLogin = async ({ email, password }) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json"},
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if(res.ok) {
+        // 토큰 저장
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        alert("로그인 성공!");
+
+        window.location.href = "/";
+      }
+      else {
+        alert("로그인 실패 : " + data.message);
+      }
+    }
+    catch(err) {
+      console.error("로그인 오류 : ", err);
+      alert("서버와 통신할 수 없습니다.");
+    }
   };
 
   return (
