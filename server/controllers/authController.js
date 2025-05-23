@@ -1,15 +1,9 @@
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
-<<<<<<< HEAD
 import jwt from "jsonwebtoken";
 import db from "../db/index.js";
-import { use } from "react";
 
 // 회원가입 - 순수 저장만
-=======
-import db from "../db/index.js";
-
->>>>>>> e5412063fde660cda7f19e91922738fc2c599272
 export const signup = async (req, res) => {
   console.log('📥 받은 요청 바디:', req.body);
   const { name, email, password, phone } = req.body;
@@ -38,10 +32,9 @@ export const signup = async (req, res) => {
     console.error("회원가입 에러 : ", err);
     res.status(500).json({ message: "서버 에러"});
   }
-<<<<<<< HEAD
 };
 
-// 로그인 - jwt 발급
+// 로그인 - JWT 발급
 export const login = async (req, res) => {
   const { email, password} = req.body;
 
@@ -79,6 +72,4 @@ export const login = async (req, res) => {
     console.error("로그인 에러 : ", err.message);
     res.status(500).json({ message: "서버 에러" });
   }
-=======
->>>>>>> e5412063fde660cda7f19e91922738fc2c599272
 };

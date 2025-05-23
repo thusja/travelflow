@@ -80,11 +80,7 @@ const SignUpForm = () => {
 
       if (res.ok) {
         alert('회원가입이 완료되었습니다!');
-<<<<<<< HEAD
-
         window.location.href = "/login";
-=======
->>>>>>> e5412063fde660cda7f19e91922738fc2c599272
       } else {
         alert('회원가입 실패: ' + data.message);
       }
