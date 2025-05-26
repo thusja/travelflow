@@ -17,7 +17,7 @@ const LoginForm = ({ onLogin }) => {
     ref.current?.focus();
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!email.trim()) {
       setErrorMsg('이메일을 입력해주세요.');
@@ -30,26 +30,7 @@ const LoginForm = ({ onLogin }) => {
       return;
     }
     setErrorMsg('');
-
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert("아이디 또는 비밀번호가 일치하지 않습니다.");
-        return;
-      }
-
-      onLogin(data);
-    } catch (err) {
-      console.error("로그인 요청 실패:", err);
-      alert("서버 오류가 발생했습니다.");
-    }
+    onLogin({ email, password });
   };
 
   return (

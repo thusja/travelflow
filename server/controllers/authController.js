@@ -41,14 +41,14 @@ export const login = async (req, res) => {
     const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
     if (rows.length === 0) {
-      return res.status(401).json({ message: "존재하지 않는 이메일입니다." });
+      return res.status(401).json({ message: "아이디 또는 비밀번호가 일치하지 않습니다." });
     }
 
     const user = rows[0];
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
-      return res.status(401).json({ message: "비밀번호가 일치하지 않습니다." });
+      return res.status(401).json({ message: "아이디 또는 비밀번호가 일치하지 않습니다." });
     }
 
     const token = jwt.sign(
