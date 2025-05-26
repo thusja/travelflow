@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const LoginForm = ({ onLogin }) => {
@@ -7,26 +7,60 @@ const LoginForm = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
-  const handleSubmit = (e) => {
+  const showAlertAndFocus = (message, ref) => {
+    alert(message);
+    ref.current?.focus();
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg('이메일과 비밀번호를 모두 입력해주세요.');
+    if (!email.trim()) {
+      setErrorMsg('이메일을 입력해주세요.');
+      showAlertAndFocus('이메일을 입력해주세요.', emailRef);
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMsg('비밀번호를 입력해주세요.');
+      showAlertAndFocus('비밀번호를 입력해주세요.', passwordRef);
       return;
     }
     setErrorMsg('');
-    onLogin({ email, password });
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert("아이디 또는 비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      onLogin(data);
+    } catch (err) {
+      console.error("로그인 요청 실패:", err);
+      alert("서버 오류가 발생했습니다.");
+    }
   };
 
   return (
-    <>
+    <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-4">
       <p className="text-xl sm:text-2xl font-bold text-black text-center">
         Welcome back to <span className="text-blue-600">Travel Flow</span>
       </p>
 
       <input
         type="email"
+        ref={emailRef}
         placeholder="Enter your email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
@@ -36,6 +70,7 @@ const LoginForm = ({ onLogin }) => {
       <div className="relative w-full sm:w-4/5">
         <input
           type={showPassword ? 'text' : 'password'}
+          ref={passwordRef}
           placeholder="Enter your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -56,12 +91,12 @@ const LoginForm = ({ onLogin }) => {
       )}
 
       <button
-        onClick={handleSubmit}
+        type="submit"
         className="w-full sm:w-4/5 mt-6 py-2 bg-black text-white font-bold rounded-md hover:scale-105 transition"
       >
         LOGIN
       </button>
-    </>
+    </form>
   );
 };
 

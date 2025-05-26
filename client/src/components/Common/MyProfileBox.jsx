@@ -12,7 +12,7 @@ const MyProfileBox = ({ user, onLogout}) => {
       />
 
       {/* 닉네임 */}
-      <span className="font-semibold text-gray-800">{user.name}</span>
+      <span className="font-semibold text-gray-800">{user.nickname}</span>
 
       {/* 로그아웃 버튼 */}
       <button onClick={onLogout} className="ml-2 px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300 transition">로그아웃</button>
