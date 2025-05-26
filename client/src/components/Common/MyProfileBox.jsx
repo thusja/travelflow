@@ -1,24 +1,86 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import profile from "@/assets/images/default-profile.png";
+import {
+  FiLogOut,
+  FiUser,
+  FiSettings,
+  FiPackage,
+  FiChevronDown
+} from "react-icons/fi";
 
-const MyProfileBox = ({ user, onLogout}) => {
+const MyProfileBox = ({ user, onLogout }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-full shadow border">
-      {/* 프로필 이미지 (기본 이미지) */}
-      <img
-        src={profile}
-        alt="profile"
-        className="w-10 h-10 rounded-full object-cover border"
-      />
+    <div ref={dropdownRef} className="relative profile-dropdown">
+      {/* 메인 프로필 박스 */}
+      <div
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center px-4 py-2 rounded-full border border-gray-300 bg-white shadow-sm hover:shadow-md cursor-pointer transition duration-300"
+      >
+        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 p-[2px]">
+          <div className="w-full h-full bg-white rounded-full overflow-hidden">
+            <img
+              src={profile}
+              alt="profile"
+              className="w-full h-full object-cover rounded-full"
+            />
+          </div>
+        </div>
+        <span className="ml-3 font-medium text-sm text-gray-800 truncate max-w-[120px]">
+          {user.nickname}
+        </span>
+        <FiChevronDown className="ml-2 text-gray-500 text-sm" />
+      </div>
 
-      {/* 닉네임 */}
-      <span className="font-semibold text-gray-800">{user.nickname}</span>
-
-      {/* 로그아웃 버튼 */}
-      <button onClick={onLogout} className="ml-2 px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300 transition">로그아웃</button>
-
+      {/* 드롭다운 메뉴 */}
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50 animate-fadeIn">
+          <ul className="text-sm text-gray-700 divide-y divide-gray-100">
+            <li>
+              <a href="/profile/info" className="flex items-center px-4 py-2 hover:bg-gray-100">
+                <FiUser className="mr-2" />
+                내 프로필
+              </a>
+            </li>
+            <li>
+              <a href="/myBookings/history" className="flex items-center px-4 py-2 hover:bg-gray-100">
+                <FiPackage className="mr-2" />
+                나의 예약
+              </a>
+            </li>
+            <li>
+              <a href="/settings/app" className="flex items-center px-4 py-2 hover:bg-gray-100">
+                <FiSettings className="mr-2" />
+                설정
+              </a>
+            </li>
+            <li>
+              <button
+                onClick={onLogout}
+                className="w-full text-left flex items-center px-4 py-2 hover:bg-gray-100 text-red-600"
+              >
+                <FiLogOut className="mr-2" />
+                로그아웃
+              </button>
+            </li>
+          </ul>
+        </div>
+      )}
     </div>
-  )
-}
+  );
+};
 
 export default MyProfileBox;
