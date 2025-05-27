@@ -19,7 +19,6 @@ const LoginPage = () => {
 
       if(res.ok) {
         login(data.user, data.token); // 전역 로그인 처리
-        alert("로그인 성공!");
         window.location.href = "/";
       }
       else {
