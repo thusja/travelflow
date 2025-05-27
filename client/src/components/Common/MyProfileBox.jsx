@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import profile from "@/assets/images/default-profile.png";
+import defaultProfile from "@/assets/images/default-profile.png";
 import {
   FiLogOut,
   FiUser,
@@ -23,6 +23,8 @@ const MyProfileBox = ({ user, onLogout }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const profileSrc = user.profileImage || defaultProfile;
+
   return (
     <div ref={dropdownRef} className="relative profile-dropdown">
       {/* 메인 프로필 박스 */}
@@ -33,7 +35,7 @@ const MyProfileBox = ({ user, onLogout }) => {
         <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 p-[2px]">
           <div className="w-full h-full bg-white rounded-full overflow-hidden">
             <img
-              src={profile}
+              src={profileSrc}
               alt="profile"
               className="w-full h-full object-cover rounded-full"
             />

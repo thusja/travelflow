@@ -18,6 +18,7 @@ import PrivateRoute from '@/components/Common/PrivateRoute';
 
 import MyProfileSidebar from "@/components/Profiles/MyProfileSidebar";
 import Info from "@/components/Profiles/profile/Info";
+import ProfileEdit from './components/Profiles/profile/ProfileEdit';
 import Password from "@/components/Profiles/profile/Password";
 import Logs from "@/components/Profiles/profile/Logs";
 import Withdraw from "@/components/Profiles/profile/Withdraw";
@@ -58,6 +59,7 @@ function App() {
                   <div className="flex-1 p-6">
                     <Routes>
                       <Route path="info" element={<Info />} />
+                      <Route path='edit' element={<ProfileEdit />} />
                       <Route path="password" element={<Password />} />
                       <Route path="logs" element={<Logs />} />
                       <Route path="withdraw" element={<Withdraw />} />
