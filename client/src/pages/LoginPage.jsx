@@ -2,8 +2,11 @@ import React from 'react';
 import loginCover from '@/assets/images/loginCover.png';
 import LoginForm from '@/components/Login/LoginForm';
 import SocialLogin from '@/components/Login/SocialLogin';
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
+  const { login } = useAuth();
+
   const handleLogin = async ({ email, password }) => {
     try {
       const res = await fetch("http://localhost:5000/api/auth/login", {
@@ -15,12 +18,8 @@ const LoginPage = () => {
       const data = await res.json();
 
       if(res.ok) {
-        // 토큰 저장
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
+        login(data.user, data.token); // 전역 로그인 처리
         alert("로그인 성공!");
-
         window.location.href = "/";
       }
       else {

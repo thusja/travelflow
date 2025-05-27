@@ -1,23 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navigation from './Navigation';
 import logo from '@/assets/images/logo.png';
 import { MdMenu } from 'react-icons/md';
 import { ImCross } from 'react-icons/im';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MyProfileBox from "./MyProfileBox";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const [openNav, setOpenNav] = useState(false);
-  const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+  const { user, logout } = useAuth();
 
   const handleLogoClick = () => {
     if (location.pathname === "/") {
@@ -25,13 +19,6 @@ const Header = () => {
     } else {
       navigate("/");
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    navigate("/");
   };
 
   return (
@@ -54,10 +41,10 @@ const Header = () => {
         {/* 로그인 or 프로필 */}
         <div className="flex items-center gap-4">
           {user ? (
-            <MyProfileBox user={user} onLogout={handleLogout} />
+            <MyProfileBox user={user} onLogout={logout} />
           ) : (
             <Link
-              to="/Login"
+              to="/login"
               className="bg-black text-white px-4 py-2 rounded-md font-semibold text-lg hover:bg-white hover:text-black transition mr-2 sm:mr-4"
             >
               Login
@@ -83,14 +70,14 @@ const Header = () => {
             <div className="flex items-center gap-3">
               {user ? (
                 <button
-                  onClick={handleLogout}
+                  onClick={logout}
                   className="text-sm bg-black text-white px-4 py-2 rounded-md hover:bg-white hover:text-black transition"
                 >
                   로그아웃
                 </button>
               ) : (
                 <Link
-                  to="/Login"
+                  to="/login"
                   className="bg-black text-white px-4 py-2 text-lg font-semibold rounded-md hover:bg-white hover:text-black transition mr-2 sm:mr-4 max-sm:text-sm max-sm:px-3 max-sm:py-1"
                 >
                   Login
