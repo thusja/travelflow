@@ -5,7 +5,6 @@ import db from "../db/index.js";
 
 // 회원가입 - 순수 저장만
 export const signup = async (req, res) => {
-  console.log('📥 받은 요청 바디:', req.body);
   const { nickname, firstname, lastname, email, password, phone } = req.body;
 
   try {
@@ -66,7 +65,8 @@ export const login = async (req, res) => {
         firstname: user.firstname,
         lastname: user.lastname,
         email: user.email,
-        phone: user.phone
+        phone: user.phone,
+        profileImage: user.profileImage
       }
     });
   } catch (err) {

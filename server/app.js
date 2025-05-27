@@ -13,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/uploads", express.static("uploads"));
 app.use("/api/packages", packagesRouter);
 
 app.listen(PORT, () => {
