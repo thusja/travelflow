@@ -1,105 +1,127 @@
 import React, { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import ProfileImageEditor from "./ProfileImageEditor";
+import { useAuth } from "@/contexts/AuthContext";
+import ProfileImageEditor from "@/components/Profiles/profile/ProfileImageEditor";
+import defaultProfile from "@/assets/images/default-profile.png";
 
 const ProfileEdit = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    nickname: user.nickname || "",
-    name: user.name || "",
-    phone: user.phone || ""
-  });
+
+  const [preview, setPreview] = useState(user.profileImage || defaultProfile);
+  const [file, setFile] = useState(null);
+  const [nickname, setNickname] = useState(user.nickname || "");
+  const [firstname, setFirstname] = useState(user.firstname || "");
+  const [lastname, setLastname] = useState(user.lastname || "");
+  const [phone, setPhone] = useState(user.phone || "");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleSave = async () => {
+    const confirm = window.confirm("프로필을 저장하시겠습니까?");
+    if (!confirm) return;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
     setLoading(true);
+    const formData = new FormData();
+    formData.append("nickname", nickname);
+    formData.append("firstname", firstname);
+    formData.append("lastname", lastname);
+    formData.append("phone", phone);
+    if (file) {
+      formData.append("image", file);
+    }
 
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:5000/api/users/profile", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData)
+        body: formData,
       });
 
       const data = await res.json();
 
       if (res.ok) {
         login(data.user, token);
-        alert("프로필 정보가 수정되었습니다.");
+        alert("프로필이 저장되었습니다.");
         navigate("/profile/info");
       } else {
-        alert("수정 실패: " + data.message);
+        alert("저장 실패: " + data.message);
       }
     } catch (err) {
-      console.error("수정 오류:", err);
-      alert("서버 오류로 수정을 실패했습니다.");
+      console.error("저장 오류:", err);
+      alert("서버 오류로 저장에 실패했습니다.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-md text-gray-800">
-      <h2 className="text-2xl font-bold mb-6">프로필 수정</h2>
-      <ProfileImageEditor />
+    <div className="max-w-xl mx-auto mt-16 bg-white p-10 rounded-xl shadow">
+      <h2 className="text-2xl font-bold mb-6 text-center">프로필 수정</h2>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">닉네임</label>
-          <input
-            name="nickname"
-            value={formData.nickname}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
-          <input
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
-          <input
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md"
-          />
-        </div>
+      <ProfileImageEditor
+        preview={preview}
+        setPreview={setPreview}
+        setFile={setFile}
+      />
 
-        <div className="flex justify-end gap-3 pt-4">
-          <button
-            type="button"
-            onClick={() => navigate("/profile/info")}
-            className="px-4 py-2 text-sm border border-gray-400 rounded-md hover:bg-gray-100"
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "저장 중..." : "저장"}
-          </button>
+      <div className="space-y-4 mt-8">
+        <div>
+          <label className="text-sm font-medium">닉네임</label>
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            className="w-full px-4 py-2 border rounded-md"
+          />
         </div>
-      </form>
+        <div>
+          <label className="text-sm font-medium">이름</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="이름"
+              value={firstname}
+              onChange={(e) => setFirstname(e.target.value)}
+              className="w-1/2 px-4 py-2 border rounded-md"
+            />
+            <input
+              type="text"
+              placeholder="성"
+              value={lastname}
+              onChange={(e) => setLastname(e.target.value)}
+              className="w-1/2 px-4 py-2 border rounded-md"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-sm font-medium">전화번호</label>
+          <input
+            type="text"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full px-4 py-2 border rounded-md"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end mt-8 gap-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-100"
+        >
+          취소
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          {loading ? "저장 중..." : "저장"}
+        </button>
+      </div>
     </div>
   );
 };

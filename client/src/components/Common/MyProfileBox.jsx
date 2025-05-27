@@ -7,10 +7,12 @@ import {
   FiPackage,
   FiChevronDown
 } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 const MyProfileBox = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -52,26 +54,47 @@ const MyProfileBox = ({ user, onLogout }) => {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50 animate-fadeIn">
           <ul className="text-sm text-gray-700 divide-y divide-gray-100">
             <li>
-              <a href="/profile/info" className="flex items-center px-4 py-2 hover:bg-gray-100">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/profile/info");
+                }}
+                className="w-full text-left flex items-center px-4 py-2 hover:bg-gray-100"
+              >
                 <FiUser className="mr-2" />
                 내 프로필
-              </a>
-            </li>
-            <li>
-              <a href="/myBookings/history" className="flex items-center px-4 py-2 hover:bg-gray-100">
-                <FiPackage className="mr-2" />
-                나의 예약
-              </a>
-            </li>
-            <li>
-              <a href="/settings/app" className="flex items-center px-4 py-2 hover:bg-gray-100">
-                <FiSettings className="mr-2" />
-                설정
-              </a>
+              </button>
             </li>
             <li>
               <button
-                onClick={onLogout}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/myBookings/history");
+                }}
+                className="w-full text-left flex items-center px-4 py-2 hover:bg-gray-100"
+              >
+                <FiPackage className="mr-2" />
+                나의 예약
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/settings/app");
+                }}
+                className="w-full text-left flex items-center px-4 py-2 hover:bg-gray-100"
+              >
+                <FiSettings className="mr-2" />
+                설정
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onLogout();
+                }}
                 className="w-full text-left flex items-center px-4 py-2 hover:bg-gray-100 text-red-600"
               >
                 <FiLogOut className="mr-2" />

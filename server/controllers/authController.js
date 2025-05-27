@@ -6,6 +6,7 @@ import db from "../db/index.js";
 // 회원가입 - 순수 저장만
 export const signup = async (req, res) => {
   const { nickname, firstname, lastname, email, password, phone } = req.body;
+  const defaultProfilePath = "/uploads/profile/default-profile.png";
 
   try {
     // 중복 이메일 검사
@@ -14,15 +15,15 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "이미 사용 중인 이메일 입니다." });
     }
 
-    // 비밀번호 암호화
+    // 비밀번호 해시 + id uuid화
     const hashed = await bcrypt.hash(password, 10);
     const id = uuidv4();
 
     // db에 삽입
     await db.query(
-      `INSERT INTO users (id, nickname, firstname, lastname, email, password, phone, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, nickname, firstname, lastname, email, hashed, phone]
+      `INSERT INTO users (id, nickname, firstname, lastname, email, password, phone, profileImage, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, nickname, firstname, lastname, email, hashed, phone, defaultProfilePath]
     );
 
     return res.status(201).json({ message: "회원가입 성공", userId: id });
@@ -66,7 +67,8 @@ export const login = async (req, res) => {
         lastname: user.lastname,
         email: user.email,
         phone: user.phone,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        created_at: user.created_at,
       }
     });
   } catch (err) {
