@@ -14,6 +14,7 @@ import AboutPage from '@/pages/AboutPage';
 
 import Layout from '@/components/Common/Layout';
 import ScrollToTop from '@/components/Common/ScrollToTop';
+import PrivateRoute from '@/components/Common/PrivateRoute';
 
 import MyProfileSidebar from "@/components/Profiles/MyProfileSidebar";
 import Info from "@/components/Profiles/profile/Info";
@@ -33,11 +34,11 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        {/* 인증 관련 */}
+        {/* 로그인 / 로그아웃 */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
 
-        {/* 메인 레이아웃 안에서 */}
+        {/* 메인 / Header */}
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="booking" element={<BookingPage />} />
@@ -47,55 +48,63 @@ function App() {
           <Route path="util" element={<UtilPage />} />
           <Route path="about" element={<AboutPage />} />
 
-          {/* 공통 프로필 사이드바 구조 */}
+          {/* 마이페이지 */}
           <Route
             path="/profile/*"
             element={
-              <div className="flex min-h-screen bg-gray-50">
-                <MyProfileSidebar />
-                <div className="flex-1 p-6">
-                  <Routes>
-                    <Route path="info" element={<Info />} />
-                    <Route path="password" element={<Password />} />
-                    <Route path="logs" element={<Logs />} />
-                    <Route path="withdraw" element={<Withdraw />} />
-                  </Routes>
+              <PrivateRoute>
+                <div className="flex min-h-screen bg-gray-50">
+                  <MyProfileSidebar />
+                  <div className="flex-1 p-6">
+                    <Routes>
+                      <Route path="info" element={<Info />} />
+                      <Route path="password" element={<Password />} />
+                      <Route path="logs" element={<Logs />} />
+                      <Route path="withdraw" element={<Withdraw />} />
+                    </Routes>
+                  </div>
                 </div>
-              </div>
+              </PrivateRoute>
             }
           />
 
+          {/* 나의 예약 */}
           <Route
             path="/myBookings/*"
             element={
-              <div className="flex min-h-screen bg-gray-50">
-                <MyProfileSidebar />
-                <div className="flex-1 p-6">
-                  <Routes>
-                    <Route index element={<BookingHistory />} />
-                    <Route path="history" element={<BookingHistory />} />
-                    <Route path="cancel" element={<BookingCancel />} />
-                    <Route path="review" element={<BookingReview />} />
-                    <Route path="points" element={<BookingPoints />} />
-                  </Routes>
+              <PrivateRoute>
+                <div className="flex min-h-screen bg-gray-50">
+                  <MyProfileSidebar />
+                  <div className="flex-1 p-6">
+                    <Routes>
+                      <Route index element={<BookingHistory />} />
+                      <Route path="history" element={<BookingHistory />} />
+                      <Route path="cancel" element={<BookingCancel />} />
+                      <Route path="review" element={<BookingReview />} />
+                      <Route path="points" element={<BookingPoints />} />
+                    </Routes>
+                  </div>
                 </div>
-              </div>
+              </PrivateRoute>
             }
           />
 
+          {/* 나의 세팅 */}
           <Route
             path="/settings/*"
             element={
-              <div className="flex min-h-screen bg-gray-50">
-                <MyProfileSidebar />
-                <div className="flex-1 p-6">
-                  <Routes>
-                    <Route path="app" element={<AppSetting />} />
-                    <Route path="notifications" element={<Notifications />} />
-                    <Route path="language" element={<Language />} />
-                  </Routes>
+              <PrivateRoute>
+                <div className="flex min-h-screen bg-gray-50">
+                  <MyProfileSidebar />
+                  <div className="flex-1 p-6">
+                    <Routes>
+                      <Route path="app" element={<AppSetting />} />
+                      <Route path="notifications" element={<Notifications />} />
+                      <Route path="language" element={<Language />} />
+                    </Routes>
+                  </div>
                 </div>
-              </div>
+              </PrivateRoute>
             }
           />
         </Route>
