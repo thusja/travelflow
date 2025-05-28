@@ -17,19 +17,19 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 🔹 기본 미들웨어
+// 기본 미들웨어
 app.use(cors());
 app.use(express.json());
 
-// 🔹 정적 파일 서빙 (프로필 이미지용)
+// 정적 파일 서빙 (프로필 이미지용)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// 🔹 API 라우트
+// API 라우트
 app.use("/api/auth", authRoutes);
 app.use("/api/packages", packagesRouter);
 app.use("/api/users", usersRouter);
 
-// 🔹 서버 시작
+// 서버 시작
 app.listen(PORT, () => {
   console.log(`✅ Express server is running on http://localhost:${PORT}`);
 });
