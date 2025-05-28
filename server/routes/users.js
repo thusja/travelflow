@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcrypt";
 import { verifyToken } from "../middlewares/auth.js";
 import db from "../db/index.js";
 
@@ -98,6 +99,54 @@ router.put("/profile-image", verifyToken, upload.single("image"), async (req, re
     res.json({ message: "프로필 이미지가 업데이트되었습니다.", user: rows[0] });
   } catch (err) {
     console.error("DB 업데이트 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 현재 비밀번호 검증 API
+router.post("/verify-password", verifyToken, async (req, res) => {
+  const { password } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const [rows] = await db.query("SELECT password FROM users WHERE id = ?", [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    const match = await bcrypt.compare(password, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ message: "비밀번호가 일치하지 않습니다." });
+    }
+
+    res.status(200).json({ message: "비밀번호 확인 완료" });
+  }
+  catch(err) {
+    console.error("비밀번호 확인 에러:", err);
+    res.status(500).json({ message: "서버 에러" });
+  }
+});
+
+// 비밀번호 변경 API
+router.put("/password", verifyToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [userId]);
+    if(rows.length === 0) return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+
+    const user = rows[0];
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if(!match) return res.status(401).json({ message: "현재 비밀번호가 일치하지 않습니다." });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?", [hashed, userId]);
+
+    res.status(200).json({ message: "비밀번호가 변경되었습니다." });
+  }
+  catch(err) {
+    console.error("비밀번호 변경 오류 : ", err);
     res.status(500).json({ message: "서버 오류" });
   }
 });

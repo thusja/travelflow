@@ -69,8 +69,8 @@ const SignUpForm = () => {
     if (!nickname.trim()) return showToastAndFocus("닉네임을 입력해주세요.", "nickname");
     if (!phone.trim()) return showToastAndFocus("전화번호를 입력해주세요.", "phone");
 
-    if (password.length < 4) {
-      setErrorMessage('패스워드의 최소길이는 4자리 입니다.');
+    if (password.length < 6) {
+      setErrorMessage('패스워드의 최소길이는 6자리 입니다.');
       refs.password.current?.focus();
       return;
     }
