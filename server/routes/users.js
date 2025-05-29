@@ -5,6 +5,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import { verifyToken } from "../middlewares/auth.js";
 import db from "../db/index.js";
+import { getLoginLogs } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -150,5 +151,25 @@ router.put("/password", verifyToken, async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
+// Login log API
+router.get('/logs', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID가 존재하지 않습니다.' });
+    }
+
+    const [logs] = await db.query(
+      'SELECT * FROM login_logs WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+    res.status(200).json(logs);
+  } catch (err) {
+    console.error('로그인 기록 조회 오류:', err);
+    res.status(500).json({ message: '서버 오류 발생' });
+  }
+});
+
 
 export default router;

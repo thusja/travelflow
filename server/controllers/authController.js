@@ -51,10 +51,17 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "아이디 또는 비밀번호가 일치하지 않습니다." });
     }
 
+    // JWT 발급
     const token = jwt.sign(
       { id: user.id, email: user.email, firstname: user.firstname, lastname: user.lastname },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+    );
+
+    // 로그인 로그 저장
+    await db.query(
+      "INSERT INTO login_logs (user_id, ip, user_agent) VALUES (?, ?, ?)",
+      [user.id, req.ip || req.connection.remoteAddress, req.headers['user-agent']]
     );
 
     return res.status(200).json({
