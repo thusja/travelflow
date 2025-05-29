@@ -1,3 +1,6 @@
+import db from "../db/index.js";
+import dayjs from "dayjs";
+
 export const getLoginLogs = async (req, res) => {
   const userId = req.user.id;
 
@@ -12,5 +15,36 @@ export const getLoginLogs = async (req, res) => {
   catch(err) {
     console.error("로그인 기록 조회 에러 : ", err);
     res.status(500).json({ message: "서버 에러" });
+  }
+};
+
+// 탈퇴 처리
+export const deleteMe = async (req, res) => {
+  const userId = req.user.id;
+  const { reason } = req.body;
+
+  if(!reason || reason.trim() === "") {
+    return res.status(400).json({ message: "탈퇴 사유를 입력해주세요." });
+  }
+
+  try {
+    // 탈퇴 사유 로그 저장
+    await db.query(
+      "INSERT INTO withdrawal_logs (user_id, reason, created_at) VALUES (?, ? ,?)",
+      [userId, reason, dayjs().format("YYYY-MM-DD HH:mm:ss")]
+    );
+
+    // users table에서 탈퇴 처리 (소프트 삭제)
+    await db.query(
+      "UPDATE users SET is_deleted = 1, deleted_at = NOW(), updated_at = NOW() WHERE id = ?",
+      [userId]
+    );
+
+    return res.status(200).json({ message: "회원 탈퇴가 완료되었습니다."});
+  }
+  catch(err) {
+    console.error("회원 탈퇴 오류 : ", err.message);
+    console.error(err);
+    return res.status(500).json({ message: "서버 오류로 탈퇴에 실패했습니다."});
   }
 };

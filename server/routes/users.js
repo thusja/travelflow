@@ -5,7 +5,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import { verifyToken } from "../middlewares/auth.js";
 import db from "../db/index.js";
-import { getLoginLogs } from "../controllers/userController.js";
+import { deleteMe } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -171,5 +171,6 @@ router.get('/logs', verifyToken, async (req, res) => {
   }
 });
 
+router.delete("/me", verifyToken, deleteMe);
 
 export default router;
