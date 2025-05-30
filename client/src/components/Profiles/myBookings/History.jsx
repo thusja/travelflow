@@ -44,7 +44,7 @@ const History = () => {
   const [bookings, setBookings] = useState([]);
   const [statusFilter, setStatusFilter] = useState("전체");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState("desc"); // !! 정렬 상태 추가
+  const [sortOrder, setSortOrder] = useState("desc");
 
   useEffect(() => {
     setBookings(dummyBookings);
@@ -63,7 +63,7 @@ const History = () => {
     (b) => statusFilter === "전체" || b.status === statusFilter
   );
 
-  // !! 날짜 정렬 로직 추가
+  // 날짜 정렬 함수
   const sortedBookings = [...filteredBookings].sort((a, b) => {
     const aDate = new Date(a.date.split("~")[0].trim());
     const bDate = new Date(b.date.split("~")[0].trim());
