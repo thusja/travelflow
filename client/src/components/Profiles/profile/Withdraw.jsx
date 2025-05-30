@@ -54,16 +54,16 @@ const Withdraw = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto mt-20 p-6 bg-white rounded-xl shadow text-gray-800">
+    <div className="max-w-dvh mx-auto mt-20 p-6 bg-white rounded-xl shadow text-gray-800">
       <h2 className="text-2xl font-bold mb-4 text-center">회원 탈퇴</h2>
 
       {/* 회원탈퇴 안내문 */}
       <p className="text-sm text-red-600 font-semibold mb-2">※ 회원탈퇴 전 안내</p>
-      <div className="pl-4 border-l-4 border-gray-300 mb-6">
-        <ul className="text-sm text-gray-600 list-disc pl-4 space-y-1">
+      <div className="pl-4 border-l-4 border-gray-300">
+        <ul className="text-sm text-gray-600 space-y-1 leading-relaxed">
           <li>회원정보 및 작성하신 데이터는 삭제되며 복구되지 않습니다.</li>
-          <li>탈퇴 후 동일 이메일로 재가입은 가능합니다.</li>
-          <li>남아있는 이용 내역은 사라질 수 있습니다.</li>
+          <li>탈퇴된 계정은 로그인할 수 없으며, 동일 이메일로는 새로운 회원가입이 제한됩니다.</li>
+          <li>재가입을 원하실 경우, 복구 요청을 통해 계정을 활성화할 수 있습니다.</li>
         </ul>
       </div>
 

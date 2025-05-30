@@ -45,6 +45,14 @@ export const login = async (req, res) => {
     }
 
     const user = rows[0];
+
+    // 소프트 삭제된 계정 로그인 차단
+    if(user.is_deleted) {
+      return res.status(403).json({
+        message: "해당 계정은 탈퇴 처리된 상태입니다. 재가입 후 이용해주세요."
+      });
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
@@ -53,7 +61,11 @@ export const login = async (req, res) => {
 
     // JWT 발급
     const token = jwt.sign(
-      { id: user.id, email: user.email, firstname: user.firstname, lastname: user.lastname },
+      { id: user.id, 
+        email: user.email, 
+        firstname: user.firstname, 
+        lastname: user.lastname 
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
     );
@@ -81,5 +93,37 @@ export const login = async (req, res) => {
   } catch (err) {
     console.error("로그인 에러 : ", err.message);
     res.status(500).json({ message: "서버 에러" });
+  }
+};
+
+export const reactivateAccount = async (req, res) => {
+  const { email } = req.body;
+
+  if(!email || !email.trim()) {
+    return res.status(400).json({ message: " 이메일이 필요합니다." });
+  }
+
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+        if (rows.length === 0) {
+      return res.status(404).json({ message: "존재하지 않는 이메일입니다." });
+    }
+
+    const user = rows[0];
+
+    if (!user.is_deleted) {
+      return res.status(400).json({ message: "이미 활성화된 계정입니다." });
+    }
+
+    await db.query(
+      "UPDATE users SET is_deleted = 0, deleted_at = NULL, updated_at = NOW() WHERE id = ?",
+      [user.id]
+    );
+
+    return res.status(200).json({ message: "재가입이 완료되었습니다." });
+  } 
+  catch (err) {
+    console.error("재가입 처리 오류:", err);
+    return res.status(500).json({ message: "서버 오류로 재가입에 실패했습니다." });
   }
 };

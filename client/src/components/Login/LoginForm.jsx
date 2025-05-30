@@ -6,6 +6,7 @@ const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isDeletedUser, setIsDeletedUser] = useState(false);
 
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
@@ -17,7 +18,7 @@ const LoginForm = ({ onLogin }) => {
     ref.current?.focus();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
       setErrorMsg('이메일을 입력해주세요.');
@@ -30,7 +31,54 @@ const LoginForm = ({ onLogin }) => {
       return;
     }
     setErrorMsg('');
-    onLogin({ email, password });
+    setIsDeletedUser(false);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if(!res.ok) {
+        if(data.message?.includes("탈퇴")) {
+          setIsDeletedUser(true);
+        }
+        return;
+      }
+
+      // 로그인 성공
+      onLogin({ email, password });
+    }
+    catch(err) {
+      console.error("로그인 요청 오류 : ", err);
+      setErrorMsg("서버 오류가 발생했습니다.");
+    }
+  };
+
+  const handleReactivate = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/reactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("재가입이 완료되었습니다. 다시 로그인해주세요.");
+        setIsDeletedUser(false);
+      } else {
+        alert(`재가입 실패: ${data.message}`);
+      }
+    }
+    catch(err) {
+      console.error("재가입 요청 오류 : ",err);
+      alert("재가입 요청 중 오류 발생");
+    }
   };
 
   return (
@@ -69,6 +117,20 @@ const LoginForm = ({ onLogin }) => {
         <p className="text-red-500 text-sm w-full sm:w-4/5 text-left mt-1">
           {errorMsg}
         </p>
+      )}
+
+      {isDeletedUser && (
+        <div className="w-full sm:w-4/5 mt-4 p-3 border border-yellow-300 bg-yellow-50 rounded text-sm text-yellow-800">
+          <p className="mb-2 font-semibold">해당 계정은 탈퇴 처리된 상태입니다.</p>
+          <p className="mb-2">재가입 하시려면 아래 버튼을 눌러주세요.</p>
+          <button
+            type="button"
+            onClick={handleReactivate}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          >
+            재가입 요청하기
+          </button>
+        </div>
       )}
 
       <button
