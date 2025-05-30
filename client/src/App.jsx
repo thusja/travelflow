@@ -23,6 +23,7 @@ import Password from "@/components/Profiles/profile/Password";
 import Logs from "@/components/Profiles/profile/Logs";
 import Withdraw from "@/components/Profiles/profile/Withdraw";
 import BookingHistory from "@/components/Profiles/myBookings/History";
+import BookingDetail from '@/components/Profiles/myBookings/BookingDetail';
 import BookingCancel from "@/components/Profiles/myBookings/Cancel";
 import BookingReview from "@/components/Profiles/myBookings/Review";
 import BookingPoints from "@/components/Profiles/myBookings/Points";
@@ -81,6 +82,7 @@ function App() {
                     <Routes>
                       <Route index element={<BookingHistory />} />
                       <Route path="history" element={<BookingHistory />} />
+                      <Route path="detail/:bookingId" element={<BookingDetail />} />
                       <Route path="cancel" element={<BookingCancel />} />
                       <Route path="review" element={<BookingReview />} />
                       <Route path="points" element={<BookingPoints />} />
