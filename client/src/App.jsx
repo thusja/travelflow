@@ -26,6 +26,7 @@ import BookingHistory from "@/components/Profiles/myBookings/History";
 import BookingDetail from '@/components/Profiles/myBookings/BookingDetail';
 import BookingCancel from "@/components/Profiles/myBookings/Cancel";
 import BookingReview from "@/components/Profiles/myBookings/Review";
+import ReviewForm from '@/components/Profiles/myBookings/ReviewForm';
 import BookingPoints from "@/components/Profiles/myBookings/Points";
 import AppSetting from "@/components/Profiles/settings/AppSetting";
 import Notifications from "@/components/Profiles/settings/Notifications";
@@ -85,6 +86,7 @@ function App() {
                       <Route path="detail/:bookingId" element={<BookingDetail />} />
                       <Route path="cancel" element={<BookingCancel />} />
                       <Route path="review" element={<BookingReview />} />
+                      <Route path="review/:bookingId" element={<ReviewForm />} />
                       <Route path="points" element={<BookingPoints />} />
                     </Routes>
                   </div>
