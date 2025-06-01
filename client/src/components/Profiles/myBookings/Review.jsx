@@ -29,7 +29,7 @@ const BookingReview = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-white rounded-2xl shadow">
+    <div className="p-6 max-w-4xl mx-auto bg-white rounded-2xl shadow mt-10">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">이용 후기 작성</h2>
 
       <div className="space-y-4">
