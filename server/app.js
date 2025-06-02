@@ -6,14 +6,15 @@ import { fileURLToPath } from "url";
 
 import packagesRouter from "./routes/packages.js";
 import authRoutes from "./routes/auth.js";
-import usersRouter from "./routes/users.js"; // 사용자 이미지 수정 API 등 포함
+import usersRouter from "./routes/users.js";
+import reviewsRouter from "./routes/reviews.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// __dirname 설정 (ESM에서는 직접 구해야 함)
+// __dirname 설정
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -28,6 +29,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/packages", packagesRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/review", reviewsRouter);
 
 // 서버 시작
 app.listen(PORT, () => {
