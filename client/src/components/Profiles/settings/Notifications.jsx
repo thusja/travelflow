@@ -1,7 +1,7 @@
 const Notifications = () => {
   return (
     <div>
-      공지사항
+      알림설정
     </div>
   );
 };

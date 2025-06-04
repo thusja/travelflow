@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   FiUser, FiKey, FiClock, FiTrash2, FiClipboard,
-  FiMessageCircle, FiGift, FiSettings, FiBell, FiGlobe
+  FiMessageCircle, FiGift, FiSettings, FiBell
 } from "react-icons/fi";
 
 const MyProfileSidebar = () => {
@@ -39,7 +39,6 @@ const MyProfileSidebar = () => {
       items: [
         { key: "app", label: "앱 설정", path: "/settings/app", icon: <FiSettings /> },
         { key: "notifications", label: "알림 설정", path: "/settings/notifications", icon: <FiBell /> },
-        { key: "language", label: "언어 설정", path: "/settings/language", icon: <FiGlobe /> },
       ],
     },
   ];

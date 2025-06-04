@@ -30,7 +30,6 @@ import ReviewForm from '@/components/Profiles/myBookings/ReviewForm';
 import BookingPoints from "@/components/Profiles/myBookings/Points";
 import AppSetting from "@/components/Profiles/settings/AppSetting";
 import Notifications from "@/components/Profiles/settings/Notifications";
-import Language from "@/components/Profiles/settings/Language";
 
 function App() {
   return (
@@ -106,7 +105,6 @@ function App() {
                     <Routes>
                       <Route path="app" element={<AppSetting />} />
                       <Route path="notifications" element={<Notifications />} />
-                      <Route path="language" element={<Language />} />
                     </Routes>
                   </div>
                 </div>
