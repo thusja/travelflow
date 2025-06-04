@@ -8,6 +8,7 @@ import packagesRouter from "./routes/packages.js";
 import authRoutes from "./routes/auth.js";
 import usersRouter from "./routes/users.js";
 import reviewsRouter from "./routes/reviews.js";
+import pointAndCouponRouter from "./routes/pointAndCoupon.js";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/packages", packagesRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/review", reviewsRouter);
+app.use("/api/points", pointAndCouponRouter);
 
 // 서버 시작
 app.listen(PORT, () => {
