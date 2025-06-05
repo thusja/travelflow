@@ -18,7 +18,8 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true,
-      }
+      },
+      '/api': 'http://localhost:5000',
     }
   }
 });
