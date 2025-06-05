@@ -21,6 +21,11 @@ const Header = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  }
+
   return (
     <>
       <header className="fixed top-0 left-0 w-full z-50 bg-white/60 backdrop-blur-sm shadow-md h-[80px] px-6 sm:px-20 flex items-center justify-between">
@@ -41,7 +46,7 @@ const Header = () => {
         {/* 로그인 or 프로필 */}
         <div className="flex items-center gap-4">
           {user ? (
-            <MyProfileBox user={user} onLogout={logout} />
+            <MyProfileBox user={user} onLogout={handleLogout} />
           ) : (
             <Link
               to="/login"
@@ -70,7 +75,7 @@ const Header = () => {
             <div className="flex items-center gap-3">
               {user ? (
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="text-sm bg-black text-white px-4 py-2 rounded-md hover:bg-white hover:text-black transition"
                 >
                   로그아웃
