@@ -10,6 +10,10 @@ const Points = () => {
   const [couponCode, setCouponCode] = useState("");
   const [registering, setRegistering] = useState(false);
 
+  const [pointPage, setPointPage] = useState(1);
+  const [couponPage, setCouponPage] = useState(1);
+  const ITEMS_PER_PAGE = 4;
+
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -121,6 +125,16 @@ const Points = () => {
 
   const filterTabs = ["전체", "사용 가능", "사용 완료", "기간 만료"];
 
+  const pagedPointHistory = pointHistory.slice(
+    (pointPage - 1) * ITEMS_PER_PAGE,
+    pointPage * ITEMS_PER_PAGE
+  );
+
+  const pagedCoupons = filteredCoupons.slice(
+    (couponPage - 1) * ITEMS_PER_PAGE,
+    couponPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow mt-10 space-y-8">
       <h2 className="text-2xl font-bold text-gray-800">포인트 / 쿠폰 관리</h2>
@@ -137,7 +151,7 @@ const Points = () => {
       <div>
         <h3 className="text-lg font-semibold mb-3">포인트 내역</h3>
         <ul className="space-y-2">
-          {pointHistory.map((item) => (
+          {pagedPointHistory.map((item) => (
             <li
               key={item.id}
               className="flex justify-between items-center p-3 border rounded-md text-sm text-gray-700"
@@ -157,6 +171,21 @@ const Points = () => {
             </li>
           ))}
         </ul>
+        {Math.ceil(pointHistory.length / ITEMS_PER_PAGE) > 1 && (
+          <div className="flex justify-center gap-2 mt-2">
+            {Array.from({ length: Math.ceil(pointHistory.length / ITEMS_PER_PAGE) }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setPointPage(i + 1)}
+                className={`px-3 py-1 text-sm rounded ${
+                  pointPage === i + 1 ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 쿠폰 목록 */}
@@ -190,10 +219,10 @@ const Points = () => {
 
         {/* 쿠폰 리스트 */}
         <ul className="space-y-2">
-          {filteredCoupons.length === 0 ? (
+          {pagedCoupons.length === 0 ? (
             <p className="text-sm text-gray-400">해당 상태의 쿠폰이 없습니다.</p>
           ) : (
-            filteredCoupons.map((coupon) => (
+            pagedCoupons.map((coupon) => (
               <li
                 key={coupon.id}
                 className="flex justify-between items-center p-3 border rounded-md text-sm"
@@ -217,6 +246,21 @@ const Points = () => {
             ))
           )}
         </ul>
+        {Math.ceil(filteredCoupons.length / ITEMS_PER_PAGE) > 1 && (
+          <div className="flex justify-center gap-2 mt-2">
+            {Array.from({ length: Math.ceil(filteredCoupons.length / ITEMS_PER_PAGE) }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setCouponPage(i + 1)}
+                className={`px-3 py-1 text-sm rounded ${
+                  couponPage === i + 1 ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 모달창 */}
