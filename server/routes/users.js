@@ -5,7 +5,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import { verifyToken } from "../middlewares/auth.js";
 import db from "../db/index.js";
-import { deleteMe } from "../controllers/userController.js";
+import { deleteMe, updateNotifications, getMe } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -171,6 +171,10 @@ router.get('/logs', verifyToken, async (req, res) => {
   }
 });
 
-router.delete("/me", verifyToken, deleteMe);
+router.get("/me", verifyToken, getMe);
+
+router.delete("/", verifyToken, deleteMe);
+
+router.patch("/notifications", verifyToken, updateNotifications);
 
 export default router;

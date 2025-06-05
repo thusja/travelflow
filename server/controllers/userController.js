@@ -48,3 +48,51 @@ export const deleteMe = async (req, res) => {
     return res.status(500).json({ message: "서버 오류로 탈퇴에 실패했습니다."});
   }
 };
+
+// 알림 설정 업데이트
+export const updateNotifications = async (req, res) => {
+  const userId = req.user.id;
+  const { notifications } = req.body;
+
+  try {
+    await db.query(
+      "UPDATE Users SET notifications = ? WHERE id = ?",
+      [JSON.stringify(notifications), userId]
+    );
+    return res.json({ message: "알림 설정이 업데이트되었습니다." });
+  }
+  catch(err) {
+    console.error("알림 설정 업데이트 오류 : ", err);
+    return res.status(500).json({ message: "서버 오류" });
+  }
+};
+
+export const getMe = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [rows] = await db.query(
+      "SELECT id, firstname, lastname, nickname, email, phone, profileImage, notifications FROM users WHERE id = ? AND is_deleted = 0",
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "사용자 정보를 찾을 수 없습니다." });
+    }
+
+    const user = rows[0];
+
+    // notifications 파싱 처리
+    try {
+      user.notifications = JSON.parse(user.notifications || "{}");
+    } catch (e) {
+      user.notifications = {};
+    }
+
+    res.json(user);
+  }
+  catch(err) {
+    console.error("사용자 정보 조회 오류 :", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+}
