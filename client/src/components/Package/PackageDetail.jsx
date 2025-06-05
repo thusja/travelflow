@@ -1,5 +1,3 @@
-import React from 'react';
-
 const PackageDetail = ({ data, onBack }) => {
   return (
     <div className="bg-white p-6 rounded-md shadow">

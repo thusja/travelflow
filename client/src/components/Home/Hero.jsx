@@ -1,4 +1,3 @@
-import React from "react";
 import coverImg from "@/assets/images/cover.png";
 
 const Hero = () => {

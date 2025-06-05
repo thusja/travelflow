@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import sendIcon from '@/assets/icons/send.png';
 import subscriptionImage from '@/assets/images/subscriptImg.png';

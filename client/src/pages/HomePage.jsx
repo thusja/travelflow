@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import Hero from '@/components/Home/Hero';
 import Service from '@/components/Home/Service';
 import ServiceStats from '@/components/Home/ServiceStats';

@@ -1,5 +1,3 @@
-import React from 'react';
-
 const menuItems = [
   { key: 'exchange', label: '환율 계산기' },
   { key: 'weather', label: '날씨 정보' },

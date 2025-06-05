@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Navigation from './Navigation';
 import logo from '@/assets/images/logo.png';
 import { MdMenu } from 'react-icons/md';

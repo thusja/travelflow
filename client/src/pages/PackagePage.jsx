@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import PackageList from '@/components/Package/PackageList';
 import PackageDetail from '@/components/Package/PackageDetail';
 import { getPackages } from "@/utils/api.js";

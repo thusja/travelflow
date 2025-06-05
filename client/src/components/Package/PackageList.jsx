@@ -1,4 +1,3 @@
-import React from 'react';
 import PackageCard from './PackageCard';
 
 const PackageList = ({ packages, onSelect }) => {

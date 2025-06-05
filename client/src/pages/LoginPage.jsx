@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import loginCover from '@/assets/images/loginCover.png';
 import LoginForm from '@/components/Login/LoginForm';
 import SocialLogin from '@/components/Login/SocialLogin';

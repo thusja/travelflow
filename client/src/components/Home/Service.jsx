@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import ticketIcon from '@/assets/icons/service/ticket.png';
 import bedIcon from '@/assets/icons/service/bed.png';

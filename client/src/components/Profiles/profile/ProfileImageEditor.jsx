@@ -1,5 +1,4 @@
-// ProfileImageEditor.jsx
-import React, { useRef } from "react";
+import { useRef } from "react";
 
 const ProfileImageEditor = ({ preview, setPreview, setFile }) => {
   const fileInputRef = useRef();

@@ -1,5 +1,3 @@
-import React from 'react';
-
 const InsuranceGuide = () => {
   return (
     <div className="bg-white p-6 shadow-md rounded-md max-w-3xl mx-auto space-y-6">

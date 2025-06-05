@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import UtilSidebar from '@/components/Util/UtilSidebar';
 import ExchangeCalculator from '@/components/Util/ExchangeCalculator';
 import WeatherInfo from '@/components/Util/WeatherInfo';

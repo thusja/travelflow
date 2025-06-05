@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { FaTrashAlt } from "react-icons/fa";
 import { MdDarkMode, MdLightMode, MdSettings } from "react-icons/md";
 

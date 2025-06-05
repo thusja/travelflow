@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; // 상세 페이지 링크용
 
 const dummyBookings = [

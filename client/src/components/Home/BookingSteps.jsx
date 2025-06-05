@@ -1,5 +1,3 @@
-import React from 'react';
-
 import step1 from '@/assets/images/step/step1.png';
 import step2 from '@/assets/images/step/step2.png';
 import step3 from '@/assets/images/step/step3.png';

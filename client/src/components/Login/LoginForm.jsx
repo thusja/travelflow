@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const LoginForm = ({ onLogin }) => {

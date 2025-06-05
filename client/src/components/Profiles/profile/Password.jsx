@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 const Password = () => {
   const [step, setStep] = useState(1); // 1단계: 현재 비밀번호 확인

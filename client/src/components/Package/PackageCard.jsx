@@ -1,5 +1,3 @@
-import React from 'react';
-
 const PackageCard = ({ item, onClick }) => {
   return (
     <div

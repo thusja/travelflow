@@ -1,4 +1,3 @@
-import React from 'react';
 import logo from '@/assets/images/logo.png';
 import xIcon from '@/assets/icons/social/xIcon.png';
 import facebookIcon from '@/assets/icons/social/facebookIcon.png';

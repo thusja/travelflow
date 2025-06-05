@@ -1,4 +1,3 @@
-import React from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 

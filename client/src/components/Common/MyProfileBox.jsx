@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import defaultProfile from "@/assets/images/default-profile.png";
 import {
   FiLogOut,

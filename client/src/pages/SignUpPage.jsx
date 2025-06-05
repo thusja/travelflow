@@ -1,4 +1,3 @@
-import React from 'react';
 import signUpBg from '@/assets/images/signUpBackground.png';
 import SignUpForm from '@/components/SignUp/SignUpForm';
 

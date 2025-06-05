@@ -1,5 +1,3 @@
-import React from "react";
-
 const menuItems = [
   {key: "company", label: "회사정보"},
   {key: "service", label: "고객센터 및 상담"},

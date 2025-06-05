@@ -1,4 +1,3 @@
-import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import defaultProfile from "@/assets/images/default-profile.png";
 import { FiEdit2, FiCalendar } from "react-icons/fi";
