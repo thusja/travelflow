@@ -5,13 +5,20 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon ."
+    "dev": "nodemon .",
+    "prisma:generate": "prisma generate",
+    "prisma:pull": "prisma db pull",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:format": "prisma format"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
@@ -19,9 +26,11 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
-    "mysql2": "^3.14.1",
     "node-fetch": "^3.3.2",
     "nodemon": "^3.1.10",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.8.0"
   }
 }
