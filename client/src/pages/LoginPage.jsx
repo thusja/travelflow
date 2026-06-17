@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import loginCover from '@/assets/images/loginCover.png';
 import LoginForm from '@/components/Login/LoginForm';
 import SocialLogin from '@/components/Login/SocialLogin';
@@ -7,36 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 const LoginPage = () => {
   const { login } = useAuth();
 
-  // 탈퇴 계정 여부 전달용 상태
-  const [loginError, setLoginError] = useState({ type: "", message: ""});
-
-  const handleLogin = async ({ email, password }) => {
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if(res.ok) {
-        login(data.user, data.token); // 전역 로그인 처리
-        window.location.href = "/";
-      }
-      else {
-        // 🔥 탈퇴 계정 메시지 구분
-        if (data.message?.includes("탈퇴")) {
-          setLoginError({ type: "deleted", message: data.message });
-        } else {
-          setLoginError({ type: "error", message: data.message });
-        }
-      }
-    }
-    catch(err) {
-      console.error("로그인 오류 : ", err);
-      setLoginError({ type: "error", message: "서버와 통신할 수 없습니다." });
-    }
+  const handleLogin = (userData, token) => {
+    login(userData, token);
+    window.location.href = "/";
   };
 
   return (

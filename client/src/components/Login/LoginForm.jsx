@@ -46,11 +46,12 @@ const LoginForm = ({ onLogin }) => {
         if(data.message?.includes("탈퇴")) {
           setIsDeletedUser(true);
         }
+        setErrorMsg(data.message || "로그인에 실패했습니다.");
         return;
       }
 
       // 로그인 성공
-      onLogin({ email, password });
+      onLogin(data.user, data.token);
     }
     catch(err) {
       console.error("로그인 요청 오류 : ", err);

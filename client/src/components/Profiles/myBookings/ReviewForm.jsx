@@ -37,7 +37,7 @@ const ReviewForm = () => {
     const formData = new FormData();
     formData.append("bookingId", bookingId);
     formData.append("rating", rating);
-    formData.append("content", content);
+    formData.append("comment", content);
     if (image) {
       formData.append("image", image);
     }
