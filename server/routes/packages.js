@@ -1,5 +1,6 @@
 import { Router } from "express";
 import prisma from "../db/index.js";
+import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 import {
   createListMeta,
   hasListQuery,
@@ -64,9 +65,11 @@ router.get("/", async (req, res) => {
     return res.json(items);
   } catch (error) {
     console.error("패키지 목록 조회 실패:", error);
-    return res
-      .status(500)
-      .json({ message: "패키지 목록 조회에 실패했습니다." });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "패키지 목록 조회에 실패했습니다.",
+    });
   }
 });
 

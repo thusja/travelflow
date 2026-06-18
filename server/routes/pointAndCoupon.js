@@ -2,6 +2,11 @@ import express from "express";
 import crypto from "crypto";
 import prisma from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
+import {
+  createErrorBody,
+  ERROR_CODES,
+  sendError,
+} from "../utils/apiResponse.js";
 
 const router = express.Router();
 
@@ -74,7 +79,11 @@ router.get("/", verifyToken, async (req, res) => {
     });
   } catch (err) {
     console.error("포인트/쿠폰 불러오기 오류:", err);
-    res.status(500).json({ message: "포인트/쿠폰 불러오기 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "포인트/쿠폰 불러오기 실패",
+    });
   }
 });
 
@@ -133,18 +142,22 @@ router.post("/register", verifyToken, async (req, res) => {
         });
 
         if (!existing) {
-          return res
-            .status(409)
-            .json({
+          return res.status(409).json(
+            createErrorBody({
+              code: ERROR_CODES.CONFLICT_DUPLICATE,
               message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
-            });
+            }),
+          );
         }
 
         if (existing.requestHash !== requestHash) {
-          return res.status(409).json({
-            message:
-              "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
-          });
+          return res.status(409).json(
+            createErrorBody({
+              code: ERROR_CODES.CONFLICT_DUPLICATE,
+              message:
+                "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
+            }),
+          );
         }
 
         if (
@@ -156,11 +169,12 @@ router.post("/register", verifyToken, async (req, res) => {
             .json(existing.responseBody);
         }
 
-        return res
-          .status(409)
-          .json({
+        return res.status(409).json(
+          createErrorBody({
+            code: ERROR_CODES.CONFLICT_DUPLICATE,
             message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
-          });
+          }),
+        );
       }
     }
 
@@ -174,7 +188,10 @@ router.post("/register", verifyToken, async (req, res) => {
     if (!coupon) {
       return finalize(
         400,
-        { message: "유효하지 않거나 만료된 쿠폰입니다" },
+        createErrorBody({
+          code: ERROR_CODES.VALIDATION_ERROR,
+          message: "유효하지 않거나 만료된 쿠폰입니다",
+        }),
         "failed",
       );
     }
@@ -188,7 +205,14 @@ router.post("/register", verifyToken, async (req, res) => {
     });
 
     if (existing) {
-      return finalize(409, { message: "이미 등록된 쿠폰입니다." }, "failed");
+      return finalize(
+        409,
+        createErrorBody({
+          code: ERROR_CODES.CONFLICT_DUPLICATE,
+          message: "이미 등록된 쿠폰입니다.",
+        }),
+        "failed",
+      );
     }
 
     const uuid = crypto.randomUUID();
@@ -211,13 +235,20 @@ router.post("/register", verifyToken, async (req, res) => {
           data: {
             state: "failed",
             statusCode: 500,
-            responseBody: { message: "쿠폰 등록 중 오류 발생" },
+            responseBody: createErrorBody({
+              code: ERROR_CODES.INTERNAL_ERROR,
+              message: "쿠폰 등록 중 오류 발생",
+            }),
           },
         })
         .catch(() => undefined);
     }
 
-    res.status(500).json({ message: "쿠폰 등록 중 오류 발생" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "쿠폰 등록 중 오류 발생",
+    });
   }
 });
 

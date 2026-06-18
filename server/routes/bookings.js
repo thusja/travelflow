@@ -3,6 +3,11 @@ import crypto from "crypto";
 import prisma from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
 import {
+  createErrorBody,
+  ERROR_CODES,
+  sendError,
+} from "../utils/apiResponse.js";
+import {
   createListMeta,
   hasListQuery,
   parsePageSize,
@@ -52,16 +57,23 @@ const startIdempotency = async ({
     });
 
     if (!existing) {
-      res.status(409).json({
-        message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
-      });
+      res.status(409).json(
+        createErrorBody({
+          code: ERROR_CODES.CONFLICT_DUPLICATE,
+          message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
+        }),
+      );
       return { proceed: false, record: null };
     }
 
     if (existing.requestHash !== requestHash) {
-      res.status(409).json({
-        message: "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
-      });
+      res.status(409).json(
+        createErrorBody({
+          code: ERROR_CODES.CONFLICT_DUPLICATE,
+          message:
+            "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
+        }),
+      );
       return { proceed: false, record: null };
     }
 
@@ -73,9 +85,12 @@ const startIdempotency = async ({
       return { proceed: false, record: null };
     }
 
-    res.status(409).json({
-      message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
-    });
+    res.status(409).json(
+      createErrorBody({
+        code: ERROR_CODES.CONFLICT_DUPLICATE,
+        message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
+      }),
+    );
     return { proceed: false, record: null };
   }
 };
@@ -111,7 +126,11 @@ router.get("/catalog", async (req, res) => {
     res.json(packages);
   } catch (err) {
     console.error("예약 카탈로그 조회 오류:", err);
-    res.status(500).json({ message: "예약 카탈로그 조회 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 카탈로그 조회 실패",
+    });
   }
 });
 
@@ -196,7 +215,11 @@ router.get("/", verifyToken, async (req, res) => {
     res.json(items);
   } catch (err) {
     console.error("예약 목록 조회 오류:", err);
-    res.status(500).json({ message: "예약 목록 조회 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 목록 조회 실패",
+    });
   }
 });
 
@@ -226,7 +249,11 @@ router.get("/:id", verifyToken, async (req, res) => {
     });
 
     if (!booking) {
-      return res.status(404).json({ message: "예약 정보를 찾을 수 없습니다." });
+      return sendError(res, {
+        status: 404,
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "예약 정보를 찾을 수 없습니다.",
+      });
     }
 
     res.json({
@@ -242,7 +269,11 @@ router.get("/:id", verifyToken, async (req, res) => {
     });
   } catch (err) {
     console.error("예약 상세 조회 오류:", err);
-    res.status(500).json({ message: "예약 상세 조회 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 상세 조회 실패",
+    });
   }
 });
 
@@ -255,16 +286,20 @@ router.post("/", verifyToken, async (req, res) => {
 
   try {
     if (!packageId || !bookingDate) {
-      return res
-        .status(400)
-        .json({ message: "packageId와 bookingDate가 필요합니다." });
+      return sendError(res, {
+        status: 400,
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message: "packageId와 bookingDate가 필요합니다.",
+      });
     }
 
     const normalizedBookingDate = new Date(bookingDate);
     if (Number.isNaN(normalizedBookingDate.getTime())) {
-      return res
-        .status(400)
-        .json({ message: "유효하지 않은 bookingDate 입니다." });
+      return sendError(res, {
+        status: 400,
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message: "유효하지 않은 bookingDate 입니다.",
+      });
     }
 
     const requestHash = crypto
@@ -298,7 +333,10 @@ router.post("/", verifyToken, async (req, res) => {
     });
 
     if (!pkg) {
-      const body = { message: "존재하지 않는 패키지입니다." };
+      const body = createErrorBody({
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "존재하지 않는 패키지입니다.",
+      });
       await finalizeIdempotency({
         record: idempotencyRecord,
         statusCode: 404,
@@ -342,7 +380,10 @@ router.post("/", verifyToken, async (req, res) => {
     return res.status(201).json(body);
   } catch (err) {
     console.error("예약 생성 오류:", err);
-    const body = { message: "예약 생성 중 오류가 발생했습니다." };
+    const body = createErrorBody({
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 생성 중 오류가 발생했습니다.",
+    });
     await finalizeIdempotency({
       record: idempotencyRecord,
       statusCode: 500,
@@ -350,7 +391,7 @@ router.post("/", verifyToken, async (req, res) => {
       state: "failed",
     });
 
-    res.status(500).json(body);
+    return res.status(500).json(body);
   }
 });
 
@@ -391,7 +432,10 @@ router.patch("/:id/cancel", verifyToken, async (req, res) => {
     });
 
     if (!booking) {
-      const body = { message: "예약 정보를 찾을 수 없습니다." };
+      const body = createErrorBody({
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "예약 정보를 찾을 수 없습니다.",
+      });
       await finalizeIdempotency({
         record: idempotencyRecord,
         statusCode: 404,
@@ -450,7 +494,10 @@ router.patch("/:id/cancel", verifyToken, async (req, res) => {
     return res.status(200).json(body);
   } catch (err) {
     console.error("예약 취소 오류:", err);
-    const body = { message: "예약 취소 중 오류가 발생했습니다." };
+    const body = createErrorBody({
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 취소 중 오류가 발생했습니다.",
+    });
 
     await finalizeIdempotency({
       record: idempotencyRecord,
@@ -459,7 +506,7 @@ router.patch("/:id/cancel", verifyToken, async (req, res) => {
       state: "failed",
     });
 
-    res.status(500).json(body);
+    return res.status(500).json(body);
   }
 });
 

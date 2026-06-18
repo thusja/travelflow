@@ -1,4 +1,5 @@
 import prisma from "../db/index.js";
+import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 
 export const getLoginLogs = async (req, res) => {
   const userId = req.user.id;
@@ -25,7 +26,11 @@ export const getLoginLogs = async (req, res) => {
     );
   } catch (err) {
     console.error("로그인 기록 조회 에러 : ", err);
-    res.status(500).json({ message: "서버 에러" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "서버 에러",
+    });
   }
 };
 
@@ -35,7 +40,11 @@ export const deleteMe = async (req, res) => {
   const { reason } = req.body;
 
   if (!reason || reason.trim() === "") {
-    return res.status(400).json({ message: "탈퇴 사유를 입력해주세요." });
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "탈퇴 사유를 입력해주세요.",
+    });
   }
 
   try {
@@ -58,9 +67,11 @@ export const deleteMe = async (req, res) => {
   } catch (err) {
     console.error("회원 탈퇴 오류 : ", err.message);
     console.error(err);
-    return res
-      .status(500)
-      .json({ message: "서버 오류로 탈퇴에 실패했습니다." });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "서버 오류로 탈퇴에 실패했습니다.",
+    });
   }
 };
 
@@ -79,7 +90,11 @@ export const updateNotifications = async (req, res) => {
     return res.json({ message: "알림 설정이 업데이트되었습니다." });
   } catch (err) {
     console.error("알림 설정 업데이트 오류 : ", err);
-    return res.status(500).json({ message: "서버 오류" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "서버 오류",
+    });
   }
 };
 
@@ -105,9 +120,11 @@ export const getMe = async (req, res) => {
     });
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "사용자 정보를 찾을 수 없습니다." });
+      return sendError(res, {
+        status: 404,
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "사용자 정보를 찾을 수 없습니다.",
+      });
     }
 
     let parsedNotifications = {};
@@ -133,6 +150,10 @@ export const getMe = async (req, res) => {
     });
   } catch (err) {
     console.error("사용자 정보 조회 오류 :", err);
-    res.status(500).json({ message: "서버 오류" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "서버 오류",
+    });
   }
 };

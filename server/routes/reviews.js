@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import prisma from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
+import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 import {
   createListMeta,
   hasListQuery,
@@ -57,7 +58,11 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
       select: { id: true },
     });
     if (existing) {
-      return res.status(400).json({ message: "이미 작성된 후기입니다." });
+      return sendError(res, {
+        status: 400,
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message: "이미 작성된 후기입니다.",
+      });
     }
 
     const imageUrl = req.file ? `/uploads/reviews/${req.file.filename}` : null;
@@ -76,7 +81,11 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
     res.status(201).json({ message: "후기가 등록되었습니다." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "후기 등록 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "후기 등록 실패",
+    });
   }
 });
 
@@ -155,7 +164,11 @@ router.get("/reviewable", verifyToken, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "예약 목록 조회 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 목록 조회 실패",
+    });
   }
 });
 
@@ -173,7 +186,11 @@ router.delete("/:id", verifyToken, async (req, res) => {
       select: { id: true },
     });
     if (!review) {
-      return res.status(404).json({ message: "후기를 찾을 수 없습니다." });
+      return sendError(res, {
+        status: 404,
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "후기를 찾을 수 없습니다.",
+      });
     }
 
     await prisma.review.update({
@@ -187,7 +204,11 @@ router.delete("/:id", verifyToken, async (req, res) => {
     res.json({ message: "후기가 삭제되었습니다." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "후기 삭제 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "후기 삭제 실패",
+    });
   }
 });
 

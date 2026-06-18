@@ -1,6 +1,7 @@
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 
 dotenv.config();
 
@@ -45,18 +46,28 @@ router.get("/exchange-rates", async (req, res) => {
     const data = await getExchangeRates(base || "USD", symbols || "");
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: error.message,
+    });
   }
 });
 
 // 날씨 정보 가져오기 (현재 날씨 + 7일 예보)
-const WEATHER_API_KEY = process.env.VITE_WEATHER_API_KEY;
+const WEATHER_API_KEY =
+  process.env.WEATHER_API_KEY || process.env.VITE_WEATHER_API_KEY;
 const WEATHER_BASE_URL = "https://api.openweathermap.org/data";
 
 // 실시간 날씨: /api/weather/current?lat=37.56&lon=126.97
 router.get("/weather/current", async (req, res) => {
   const { lat, lon } = req.query;
-  if(!lat || !lon) return res.status(400).json({ error: "위도와 경도가 필요합니다." });
+  if (!lat || !lon)
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "위도와 경도가 필요합니다.",
+    });
 
   try {
     const url = `${WEATHER_BASE_URL}/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&units=metric&lang=kr`;
@@ -64,27 +75,40 @@ router.get("/weather/current", async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
-    if(response.status !== 200) throw new Error(data.message);
+    if (response.status !== 200) throw new Error(data.message);
     res.json(data);
-  }catch(err) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: err.message,
+    });
   }
 });
 
 // 도시명을 입력해 날씨 검색 확장
 router.get("/weather/by-city", async (req, res) => {
   const { city } = req.query;
-  if(!city) return res.status(400).json({ error: "도시명을 입력해주세요." });
+  if (!city)
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "도시명을 입력해주세요.",
+    });
 
   try {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric&lang=kr`;
     const response = await fetch(url);
     const data = await response.json();
 
-    if(response.status !== 200) throw new Error(data.message);
+    if (response.status !== 200) throw new Error(data.message);
     res.json(data);
-  }catch(error) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: error.message,
+    });
   }
 });
 
