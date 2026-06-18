@@ -4,6 +4,8 @@ import prisma from "../db/index.js";
 import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 
 const router = express.Router();
+const MAX_DESTINATION_LENGTH = 100;
+const MAX_SUGGESTION_LENGTH = 2000;
 
 router.get("/", async (req, res) => {
   try {
@@ -31,8 +33,10 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const { destination, suggestion } = req.body || {};
+  const normalizedDestination = String(destination ?? "").trim();
+  const normalizedSuggestion = String(suggestion ?? "").trim();
 
-  if (!destination || !suggestion) {
+  if (!normalizedDestination || !normalizedSuggestion) {
     return sendError(res, {
       status: 400,
       code: ERROR_CODES.VALIDATION_ERROR,
@@ -40,12 +44,28 @@ router.post("/", async (req, res) => {
     });
   }
 
+  if (normalizedDestination.length > MAX_DESTINATION_LENGTH) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: `destination은 ${MAX_DESTINATION_LENGTH}자 이하여야 합니다.`,
+    });
+  }
+
+  if (normalizedSuggestion.length > MAX_SUGGESTION_LENGTH) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: `suggestion은 ${MAX_SUGGESTION_LENGTH}자 이하여야 합니다.`,
+    });
+  }
+
   try {
     const created = await prisma.travelSuggestion.create({
       data: {
         id: uuidv4(),
-        destination: String(destination).trim(),
-        content: String(suggestion).trim(),
+        destination: normalizedDestination,
+        content: normalizedSuggestion,
       },
       select: {
         id: true,

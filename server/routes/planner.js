@@ -4,6 +4,8 @@ import prisma from "../db/index.js";
 import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 
 const router = express.Router();
+const MAX_DESTINATION_LENGTH = 100;
+const MAX_MEMO_LENGTH = 2000;
 
 router.get("/", async (req, res) => {
   try {
@@ -40,12 +42,30 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const { destination, travelDate, memo } = req.body || {};
+  const normalizedDestination = String(destination ?? "").trim();
+  const normalizedMemo = String(memo ?? "").trim();
 
-  if (!destination || !travelDate || !memo) {
+  if (!normalizedDestination || !travelDate || !normalizedMemo) {
     return sendError(res, {
       status: 400,
       code: ERROR_CODES.VALIDATION_ERROR,
       message: "destination, travelDate, memo는 필수입니다.",
+    });
+  }
+
+  if (normalizedDestination.length > MAX_DESTINATION_LENGTH) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: `destination은 ${MAX_DESTINATION_LENGTH}자 이하여야 합니다.`,
+    });
+  }
+
+  if (normalizedMemo.length > MAX_MEMO_LENGTH) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: `memo는 ${MAX_MEMO_LENGTH}자 이하여야 합니다.`,
     });
   }
 
@@ -62,9 +82,9 @@ router.post("/", async (req, res) => {
     const created = await prisma.tripPlan.create({
       data: {
         id: uuidv4(),
-        destination: String(destination).trim(),
+        destination: normalizedDestination,
         travelDate: normalizedDate,
-        memo: String(memo).trim(),
+        memo: normalizedMemo,
       },
       select: {
         id: true,
