@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/authStorage.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
+import { queryKeys } from "@/utils/queryKeys.js";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -18,54 +20,44 @@ const statusColor = {
 
 const itemsPerPage = 4;
 
+const fetchCancelledBookings = async () => {
+  const token = getAccessToken();
+  if (!token) return [];
+
+  const res = await fetch("http://localhost:5000/api/bookings?status=cancelled", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "취소 목록 조회 실패");
+  }
+
+  return data.map((item) => ({
+    id: item.id,
+    title: item.package?.title || "패키지 정보 없음",
+    date: formatDate(item.booking_date),
+    rawDate: item.booking_date,
+    status: "취소 완료",
+    price: Number(item.package?.price || 0),
+  }));
+};
+
 const Cancel = () => {
-  const [records, setRecords] = useState([]);
   const [statusFilter, setStatusFilter] = useState("전체");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchCancelledBookings = async () => {
-      const token = getAccessToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch("http://localhost:5000/api/bookings?status=cancelled", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "취소 목록 조회 실패");
-        }
-
-        const mapped = data.map((item) => ({
-          id: item.id,
-          title: item.package?.title || "패키지 정보 없음",
-          date: formatDate(item.booking_date),
-          rawDate: item.booking_date,
-          status: "취소 완료",
-          price: Number(item.package?.price || 0),
-        }));
-
-        setRecords(mapped);
-      } catch (err) {
-        console.error("취소 목록 조회 오류:", err);
-        setError("취소/환불 내역을 불러오지 못했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCancelledBookings();
-  }, []);
+  const {
+    data: records = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.bookings.list({ status: "cancelled" }),
+    queryFn: fetchCancelledBookings,
+  });
 
   const handleFilterChange = (status) => {
     setStatusFilter(status);
@@ -76,8 +68,9 @@ const Cancel = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
-  const filtered = records.filter(
-    (r) => statusFilter === "전체" || r.status === statusFilter
+  const filtered = useMemo(
+    () => records.filter((r) => statusFilter === "전체" || r.status === statusFilter),
+    [records, statusFilter],
   );
 
   // 날짜 정렬 함수
@@ -99,9 +92,11 @@ const Cancel = () => {
         취소 / 환불 내역
       </h2>
 
-      {loading && <LoadingState message="불러오는 중..." />}
-      {!loading && error && <ErrorState message={error} />}
-      {!loading && !error && sorted.length === 0 && (
+      {isLoading && <LoadingState message="불러오는 중..." />}
+      {!isLoading && isError && (
+        <ErrorState message={error?.message || "취소/환불 내역을 불러오지 못했습니다."} />
+      )}
+      {!isLoading && !isError && sorted.length === 0 && (
         <EmptyState message="취소/환불 내역이 없습니다." />
       )}
 

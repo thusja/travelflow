@@ -1,38 +1,36 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import LoadingState from '@/components/Common/LoadingState.jsx';
 import EmptyState from '@/components/Common/EmptyState.jsx';
 import ErrorState from '@/components/Common/ErrorState.jsx';
+import { queryKeys } from '@/utils/queryKeys.js';
+
+const fetchPackages = async () => {
+  const res = await fetch("http://localhost:5000/api/packages");
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "패키지 로딩 실패");
+  }
+
+  return data;
+};
 
 const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState('Hot Deals');
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const {
+    data: packages = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: queryKeys.packages.list({ source: "home" }),
+    queryFn: fetchPackages,
+  });
 
   const tabs = ['Hot Deals', 'Special Offers', 'Discounts'];
-
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/packages");
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error("패키지 로딩 실패");
-        }
-        setPackages(data);
-      } catch (err) {
-        console.error("홈 패키지 조회 오류:", err);
-        setError("패키지 목록을 불러오지 못했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPackages();
-  }, []);
 
   const tabPackages = useMemo(() => {
     const byPriceDesc = [...packages].sort((a, b) => Number(b.price) - Number(a.price));
@@ -79,10 +77,10 @@ const Packages = () => {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            {loading ? (
+            {isLoading ? (
               <LoadingState message="패키지를 불러오는 중..." />
-            ) : error ? (
-              <ErrorState message={error} />
+            ) : isError ? (
+              <ErrorState message="패키지 목록을 불러오지 못했습니다." />
             ) : (tabPackages[selectedPackage] || []).length === 0 ? (
               <EmptyState message="표시할 패키지가 없습니다." />
             ) : (

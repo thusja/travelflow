@@ -4,13 +4,16 @@ import './index.css';
 import App from './App.jsx';
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import { installAuthFetchInterceptor } from '@/utils/httpClient.js';
+import AppQueryProvider from '@/app/QueryProvider.jsx';
 
 installAuthFetchInterceptor();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <AppQueryProvider>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </AppQueryProvider>
   </React.StrictMode>
 )
