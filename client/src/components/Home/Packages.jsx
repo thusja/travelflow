@@ -1,17 +1,44 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState('Hot Deals');
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const tabs = ['Hot Deals', 'Special Offers', 'Discounts'];
-  const packageContent = {
-    'Hot Deals': '🔥 Hot deals content goes here.',
-    'Special Offers': '🎁 Special offers content goes here.',
-    'Discounts': '💸 Discounts content goes here.',
-  };
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/packages");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error("패키지 로딩 실패");
+        }
+        setPackages(data);
+      } catch (err) {
+        console.error("홈 패키지 조회 오류:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
+
+  const tabPackages = useMemo(() => {
+    const byPriceDesc = [...packages].sort((a, b) => Number(b.price) - Number(a.price));
+    const byPriceAsc = [...packages].sort((a, b) => Number(a.price) - Number(b.price));
+
+    return {
+      'Hot Deals': byPriceDesc.slice(0, 3),
+      'Special Offers': packages.slice(0, 3),
+      'Discounts': byPriceAsc.slice(0, 3),
+    };
+  }, [packages]);
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 py-12">
@@ -38,7 +65,7 @@ const Packages = () => {
       </div>
 
       {/* 콘텐츠 영역 */}
-      <div className="min-h-[120px] flex items-center justify-center text-center text-gray-700 text-base">
+      <div className="min-h-[120px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedPackage}
@@ -47,7 +74,22 @@ const Packages = () => {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            {packageContent[selectedPackage]}
+            {loading ? (
+              <p className="text-center text-gray-500">패키지를 불러오는 중...</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(tabPackages[selectedPackage] || []).map((pkg) => (
+                  <div key={pkg.id} className="border rounded-lg p-4 bg-white text-left">
+                    <p className="text-sm text-gray-400 mb-1">#{pkg.id}</p>
+                    <h3 className="font-semibold text-gray-800 mb-2">{pkg.title}</h3>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{pkg.description}</p>
+                    <p className="text-emerald-700 font-bold">
+                      {Number(pkg.price || 0).toLocaleString()}원
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

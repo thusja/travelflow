@@ -1,27 +1,53 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const dummyUsableBookings = [
-  {
-    id: "BK202405001",
-    title: "도쿄 2박 3일 자유여행 패키지",
-    date: "2025-06-10 ~ 2025-06-12",
-    reviewed: false,
-  },
-  {
-    id: "BK202405003",
-    title: "부산 1박 2일 맛집 투어",
-    date: "2025-06-20 ~ 2025-06-21",
-    reviewed: true,
-  },
-];
+const formatDate = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("ko-KR");
+};
 
 const BookingReview = () => {
   const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    setBookings(dummyUsableBookings);
+    const fetchReviewable = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/api/review/reviewable", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "후기 가능 목록 조회 실패");
+        }
+
+        setBookings(
+          data.map((item) => ({
+            id: item.bookingId,
+            title: item.title,
+            date: formatDate(item.booking_date),
+            reviewed: Boolean(item.reviewed),
+          })),
+        );
+      } catch (err) {
+        console.error("후기 가능 목록 조회 오류:", err);
+        alert("후기 목록을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviewable();
   }, []);
 
   const handleReviewClick = (id) => {
@@ -31,6 +57,12 @@ const BookingReview = () => {
   return (
     <div className="p-6 max-w-4xl mx-auto bg-white rounded-2xl shadow mt-10">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">이용 후기 작성</h2>
+
+      {loading && <p className="text-gray-500 mb-4">불러오는 중...</p>}
+
+      {!loading && bookings.length === 0 && (
+        <p className="text-gray-500 mb-4">작성 가능한 후기가 없습니다.</p>
+      )}
 
       <div className="space-y-4">
         {bookings.map((b) => (
