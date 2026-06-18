@@ -25,6 +25,9 @@
   - 2순위: `DATABASE_URL`
 - 외부 API 키는 서버 키 우선으로 읽는다.
   - 날씨: `WEATHER_API_KEY` 우선, 없으면 `VITE_WEATHER_API_KEY` fallback
+- 캐시는 Redis 우선, 미연결 시 memory fallback으로 동작한다.
+  - Redis: `REDIS_URL`, `REDIS_CONNECT_TIMEOUT_MS`
+  - TTL: `CACHE_DEFAULT_TTL_SECONDS`, `CACHE_TTL_PACKAGES_SECONDS`, `CACHE_TTL_EXTERNAL_API_SECONDS`, `CACHE_TTL_WEATHER_CURRENT_SECONDS`, `CACHE_TTL_WEATHER_CITY_SECONDS`
 
 ## 4. Supabase 연결 가이드
 
@@ -41,6 +44,7 @@
 
 - 배포 전 `NODE_ENV`, `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN` 필수값 존재 확인
 - 외부 API 키(`EXCHANGE_API_KEY`, `WEATHER_API_KEY`) 존재 확인
+- 캐시 설정(`REDIS_URL`, TTL 계열 변수)과 `GET /api/cache/health` 결과 확인
 - 스모크 시드 테스트(`SMOKE_USER_ID`)는 운영에서 비활성 또는 별도 계정으로 제한
 
 ## 6. 실행 예시

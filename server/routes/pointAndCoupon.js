@@ -7,6 +7,7 @@ import {
   ERROR_CODES,
   sendError,
 } from "../utils/apiResponse.js";
+import { invalidateCacheByPrefixes } from "../utils/cacheStore.js";
 
 const router = express.Router();
 
@@ -224,6 +225,8 @@ router.post("/register", verifyToken, async (req, res) => {
         status: "사용 가능",
       },
     });
+
+    await invalidateCacheByPrefixes(["catalog:packages:"]);
 
     return finalize(200, { message: "쿠폰이 등록되었습니다." }, "completed");
   } catch (err) {

@@ -13,6 +13,7 @@ import {
   parsePageSize,
   parseSort,
 } from "../utils/listQuery.js";
+import { invalidateCacheByPrefixes } from "../utils/cacheStore.js";
 
 const router = express.Router();
 
@@ -370,6 +371,8 @@ router.post("/", verifyToken, async (req, res) => {
       },
     };
 
+    await invalidateCacheByPrefixes(["catalog:packages:"]);
+
     await finalizeIdempotency({
       record: idempotencyRecord,
       statusCode: 201,
@@ -483,6 +486,8 @@ router.patch("/:id/cancel", verifyToken, async (req, res) => {
         booking_date: updated.bookingDate,
       },
     };
+
+    await invalidateCacheByPrefixes(["catalog:packages:"]);
 
     await finalizeIdempotency({
       record: idempotencyRecord,
