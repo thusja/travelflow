@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon .",
+    "seed:packages": "node scripts/syncPackagesFromJson.js",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
     "prisma:push": "prisma db push",

@@ -1,7 +1,5 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import prisma from "../db/index.js";
 import {
   createListMeta,
   hasListQuery,
@@ -9,16 +7,21 @@ import {
   parseSort,
 } from "../utils/listQuery.js";
 
-// __dirname 대체
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const router = Router();
 
-const packagesFilePath = path.join(__dirname, "../data/packages.json");
-const packages = JSON.parse(fs.readFileSync(packagesFilePath, "utf-8"));
+const toPackageResponse = (pkg) => ({
+  id: pkg.id,
+  title: pkg.title,
+  description: pkg.description || "",
+  shortDescription: pkg.description || "",
+  price:
+    pkg.price === null || pkg.price === undefined ? null : Number(pkg.price),
+  thumbnail: pkg.imageUrl,
+  imageUrl: pkg.imageUrl,
+  details: pkg.description ? [pkg.description] : [],
+});
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const { filter = "", sort } = req.query;
   const { page, size, skip, take } = parsePageSize(req.query);
   const sortInfo = parseSort(sort, ["id", "title", "price"], {
@@ -26,41 +29,45 @@ router.get("/", (req, res) => {
     direction: "asc",
   });
 
-  let items = [...packages];
+  try {
+    const where =
+      filter && typeof filter === "string"
+        ? {
+            OR: [
+              { title: { contains: filter, mode: "insensitive" } },
+              { description: { contains: filter, mode: "insensitive" } },
+            ],
+          }
+        : undefined;
 
-  if (filter && typeof filter === "string") {
-    const needle = filter.toLowerCase();
-    items = items.filter(
-      (pkg) =>
-        pkg.title?.toLowerCase().includes(needle) ||
-        pkg.description?.toLowerCase().includes(needle),
-    );
-  }
+    const orderBy = { [sortInfo.key]: sortInfo.direction };
 
-  items.sort((a, b) => {
-    const left = a[sortInfo.key];
-    const right = b[sortInfo.key];
+    const [total, rows] = await Promise.all([
+      prisma.package.count({ where }),
+      prisma.package.findMany({
+        where,
+        orderBy,
+        skip,
+        take,
+      }),
+    ]);
 
-    if (typeof left === "string" && typeof right === "string") {
-      return sortInfo.direction === "asc"
-        ? left.localeCompare(right, "ko")
-        : right.localeCompare(left, "ko");
+    const items = rows.map(toPackageResponse);
+
+    if (hasListQuery(req.query)) {
+      return res.json({
+        items,
+        meta: createListMeta({ page, size, total }),
+      });
     }
 
-    return sortInfo.direction === "asc" ? left - right : right - left;
-  });
-
-  const total = items.length;
-  const paged = items.slice(skip, skip + take);
-
-  if (hasListQuery(req.query)) {
-    return res.json({
-      items: paged,
-      meta: createListMeta({ page, size, total }),
-    });
+    return res.json(items);
+  } catch (error) {
+    console.error("패키지 목록 조회 실패:", error);
+    return res
+      .status(500)
+      .json({ message: "패키지 목록 조회에 실패했습니다." });
   }
-
-  res.json(paged);
 });
 
 export default router;
