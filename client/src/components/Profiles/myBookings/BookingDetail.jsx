@@ -1,47 +1,72 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-const dummyBookings = [
-  {
-    id: "BK202405001",
-    title: "도쿄 2박 3일 자유여행 패키지",
-    date: "2025-06-10 ~ 2025-06-12",
-    status: "예약 완료",
-    price: 550000,
-  },
-  {
-    id: "BK202405002",
-    title: "제주도 렌터카 포함 숙박 패키지",
-    date: "2025-07-01 ~ 2025-07-04",
-    status: "취소 완료",
-    price: 420000,
-  },
-  {
-    id: "BK202405003",
-    title: "부산 1박 2일 맛집 투어",
-    date: "2025-06-20 ~ 2025-06-21",
-    status: "예약 완료",
-    price: 330000,
-  },
-  {
-    id: "BK202405004",
-    title: "강릉 힐링 숙소 3박",
-    date: "2025-08-03 ~ 2025-08-06",
-    status: "환불 진행중",
-    price: 610000,
-  },
-];
+const statusLabelMap = {
+  confirmed: "예약 완료",
+  completed: "예약 완료",
+  cancelled: "취소 완료",
+  pending: "예약 대기",
+};
+
+const toStatusLabel = (status) => statusLabelMap[status] || status || "알 수 없음";
 
 const statusColor = {
   "예약 완료": "text-green-500",
   "취소 완료": "text-gray-400",
-  "환불 진행중": "text-yellow-500",
+  "예약 대기": "text-yellow-500",
 };
 
 const BookingDetail = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
+  const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const booking = dummyBookings.find((b) => b.id === bookingId);
+  useEffect(() => {
+    const fetchBooking = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "예약 상세 조회 실패");
+        }
+
+        setBooking({
+          id: data.id,
+          title: data.package?.title || "패키지 정보 없음",
+          date: new Date(data.booking_date).toLocaleDateString("ko-KR"),
+          status: toStatusLabel(data.status),
+          price: Number(data.package?.price || 0),
+        });
+      } catch (err) {
+        console.error("예약 상세 조회 오류:", err);
+        setBooking(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooking();
+  }, [bookingId]);
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto bg-white shadow-md rounded-xl p-6 text-center">
+        <p className="text-gray-500">예약 정보를 불러오는 중...</p>
+      </div>
+    );
+  }
 
   if (!booking) {
     return (

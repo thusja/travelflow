@@ -1,41 +1,24 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; // 상세 페이지 링크용
 
-const dummyBookings = [
-  {
-    id: "BK202405001",
-    title: "도쿄 2박 3일 자유여행 패키지",
-    date: "2025-06-10 ~ 2025-06-12",
-    status: "예약 완료",
-    price: 550000,
-  },
-  {
-    id: "BK202405002",
-    title: "제주도 렌터카 포함 숙박 패키지",
-    date: "2025-07-01 ~ 2025-07-04",
-    status: "취소 완료",
-    price: 420000,
-  },
-  {
-    id: "BK202405003",
-    title: "부산 1박 2일 맛집 투어",
-    date: "2025-06-20 ~ 2025-06-21",
-    status: "예약 완료",
-    price: 330000,
-  },
-  {
-    id: "BK202405004",
-    title: "강릉 힐링 숙소 3박",
-    date: "2025-08-03 ~ 2025-08-06",
-    status: "환불 진행중",
-    price: 610000,
-  },
-];
+const statusLabelMap = {
+  confirmed: "예약 완료",
+  completed: "예약 완료",
+  cancelled: "취소 완료",
+  pending: "예약 대기",
+};
+
+const toStatusLabel = (status) => statusLabelMap[status] || status || "알 수 없음";
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("ko-KR");
+};
 
 const statusColor = {
   "예약 완료": "text-green-500",
   "취소 완료": "text-gray-400",
-  "환불 진행중": "text-yellow-500",
+  "예약 대기": "text-yellow-500",
 };
 
 const itemsPerPage = 4;
@@ -45,10 +28,84 @@ const History = () => {
   const [statusFilter, setStatusFilter] = useState("전체");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setBookings(dummyBookings);
+    const fetchBookings = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/api/bookings", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "예약 목록 조회 실패");
+        }
+
+        const mapped = data.map((item) => ({
+          id: item.id,
+          title: item.package?.title || "패키지 정보 없음",
+          date: formatDate(item.booking_date),
+          rawDate: item.booking_date,
+          status: toStatusLabel(item.status),
+          price: Number(item.package?.price || 0),
+        }));
+
+        setBookings(mapped);
+      } catch (err) {
+        console.error("예약 목록 불러오기 오류:", err);
+        alert("예약 목록을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
   }, []);
+
+  const handleCancel = async (bookingId) => {
+    const confirmed = window.confirm("해당 예약을 취소하시겠습니까?");
+    if (!confirmed) return;
+
+    const token = localStorage.getItem("token");
+    const idempotencyKey = `cancel-ui-${bookingId}-${Date.now()}`;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}/cancel`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ reason: "user-ui-cancel" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "예약 취소 실패");
+      }
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === bookingId ? { ...booking, status: "취소 완료" } : booking,
+        ),
+      );
+
+      alert("예약이 취소되었습니다.");
+    } catch (err) {
+      console.error("예약 취소 오류:", err);
+      alert("예약 취소 중 오류가 발생했습니다.");
+    }
+  };
 
   const handleFilterChange = (status) => {
     setStatusFilter(status);
@@ -65,8 +122,8 @@ const History = () => {
 
   // 날짜 정렬 함수
   const sortedBookings = [...filteredBookings].sort((a, b) => {
-    const aDate = new Date(a.date.split("~")[0].trim());
-    const bDate = new Date(b.date.split("~")[0].trim());
+    const aDate = new Date(a.rawDate || a.date);
+    const bDate = new Date(b.rawDate || b.date);
     return sortOrder === "asc" ? aDate - bDate : bDate - aDate;
   });
 
@@ -80,9 +137,11 @@ const History = () => {
     <div className="p-6 max-w-5xl mx-auto bg-white rounded-2xl shadow-xl">
       <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">예약 요약</h2>
 
+      {loading && <p className="text-center text-gray-500 mb-4">불러오는 중...</p>}
+
       {/* 필터 버튼 */}
       <div className="flex flex-wrap justify-center gap-2 mb-4">
-        {["전체", "예약 완료", "취소 완료", "환불 진행중"].map((status) => (
+        {["전체", "예약 완료", "취소 완료", "예약 대기"].map((status) => (
           <button
             key={status}
             onClick={() => handleFilterChange(status)}
@@ -131,7 +190,7 @@ const History = () => {
             {booking.status === "예약 완료" && (
               <button
                 className="mt-4 px-4 py-2 text-sm bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition"
-                onClick={() => alert(`예약 취소 요청: ${booking.id}`)}
+                onClick={() => handleCancel(booking.id)}
               >
                 예약 취소
               </button>
