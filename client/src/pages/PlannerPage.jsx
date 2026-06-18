@@ -15,6 +15,8 @@ const PlannerPage = () => {
   const [destination, setDestination] = useState('');
   const [planText, setPlanText] = useState('');
   const [successMessage, setSuccessMessage] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const queryClient = useQueryClient();
 
   const {
@@ -40,19 +42,35 @@ const PlannerPage = () => {
 
   const handleSave = async () => {
     setSuccessMessage("");
-    if (!startDate || !destination.trim() || !planText.trim()) {
-      alert("모든 항목을 입력해주세요.");
+    setFormError("");
+    setSubmitError("");
+
+    const normalizedDestination = destination.trim();
+    const normalizedMemo = planText.trim();
+
+    if (!startDate || !normalizedDestination || !normalizedMemo) {
+      setFormError("모든 항목을 입력해주세요.");
+      return;
+    }
+
+    if (normalizedDestination.length > 100) {
+      setFormError("여행지는 100자 이하로 입력해주세요.");
+      return;
+    }
+
+    if (normalizedMemo.length > 2000) {
+      setFormError("일정 메모는 2000자 이하로 입력해주세요.");
       return;
     }
 
     try {
       await createMutation.mutateAsync({
-        destination: destination.trim(),
+        destination: normalizedDestination,
         travelDate: startDate,
-        memo: planText.trim(),
+        memo: normalizedMemo,
       });
     } catch (e) {
-      alert(e.message || "일정 저장 중 오류가 발생했습니다.");
+      setSubmitError(e.message || "일정 저장 중 오류가 발생했습니다.");
     }
   };
 
@@ -78,10 +96,16 @@ const PlannerPage = () => {
           <input
             type="text"
             value={destination}
-            onChange={(e) => setDestination(e.target.value)}
+            onChange={(e) => {
+              setDestination(e.target.value);
+              setFormError("");
+              setSubmitError("");
+            }}
+            maxLength={100}
             placeholder="예 : 도쿄, 파리, 제주도"
             className="w-full border border-gray-300 rounded-md px-4 py-2"
           />
+          <p className="text-xs text-gray-500 mt-1 text-right">{destination.length}/100</p>
         </div>
 
         {/* 일정 메모 */}
@@ -90,10 +114,16 @@ const PlannerPage = () => {
           <textarea
             rows={5}
             value={planText}
-            onChange={(e) => setPlanText(e.target.value)}
+            onChange={(e) => {
+              setPlanText(e.target.value);
+              setFormError("");
+              setSubmitError("");
+            }}
+            maxLength={2000}
             placeholder="여기에 간단한 일정을 작성하세요"
             className="w-full border border-gray-300 rounded-md px-4 py-2"
           />
+          <p className="text-xs text-gray-500 mt-1 text-right">{planText.length}/2000</p>
         </div>
 
         {/* 버튼 */}
@@ -110,6 +140,8 @@ const PlannerPage = () => {
         {successMessage && (
           <p className="text-green-600 text-sm text-center">{successMessage}</p>
         )}
+        {formError && <p className="text-red-600 text-sm text-center">{formError}</p>}
+        {submitError && <p className="text-red-600 text-sm text-center">{submitError}</p>}
       </div>
 
       <div className="space-y-3 bg-white p-6 shadow-md rounded-md mt-6">
