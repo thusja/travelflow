@@ -6,8 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const LoginPage = () => {
   const { login } = useAuth();
 
-  const handleLogin = (userData, token) => {
-    login(userData, token);
+  const handleLogin = (userData, token, refreshToken) => {
+    login(userData, token, refreshToken);
     window.location.href = "/";
   };
 

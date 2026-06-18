@@ -51,7 +51,7 @@ const LoginForm = ({ onLogin }) => {
       }
 
       // 로그인 성공
-      onLogin(data.user, data.token);
+      onLogin(data.user, data.token, data.refreshToken);
     }
     catch(err) {
       console.error("로그인 요청 오류 : ", err);
