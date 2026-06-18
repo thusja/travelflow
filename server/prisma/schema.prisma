@@ -24,6 +24,7 @@ model User {
   bookings       Booking[]
   reviews        Review[]
   loginLogs      LoginLog[]
+  pointHistories PointHistory[]
   withdrawalLogs WithdrawalLog[]
   userCoupons    UserCoupon[]
 
@@ -135,4 +136,17 @@ model WithdrawalLog {
 
   @@index([userId])
   @@map("withdrawal_logs")
+}
+
+model PointHistory {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id") @db.Uuid
+  description String   @db.VarChar(255)
+  amount      Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("point_histories")
 }

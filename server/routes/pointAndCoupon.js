@@ -1,79 +1,76 @@
 import express from "express";
 import crypto from "crypto";
-import db from "../db/index.js";
+import prisma from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
 
 const router = express.Router();
-
-// 더미 포인트
-const dummyPoints = {
-  currentPoint: 12340,
-  history: [
-    { id: 1, date: "2025-06-01", description: "예약 결제 적립", amount: 1000 },
-    { id: 2, date: "2025-06-02", description: "후기 작성 보너스", amount: 300 },
-    { id: 3, date: "2025-06-03", description: "예약 취소 차감", amount: -500 },
-  ],
-};
-
-// 더미 쿠폰
-const dummyCoupons = [
-  {
-    id: 1,
-    name: "여름 프로모션 10% 할인",
-    status: "사용 가능",
-    expire: "2025-07-31",
-  },
-  {
-    id: 2,
-    name: "웰컴 쿠폰 5,000원",
-    status: "사용 완료",
-    expire: "2025-05-10",
-  },
-  {
-    id: 3,
-    name: "삼성카드 첫 결제 쿠폰",
-    status: "기간 만료",
-    expire: "2025-05-24",
-  },
-];
 
 // 포인트 & 쿠폰 조회
 router.get("/", verifyToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // 1. 자동 만료 업데이트
-    await db.query(
-      `UPDATE user_coupons uc
-       SET status = '기간 만료'
-       FROM coupons c
-       WHERE uc.coupon_id = c.id
-         AND uc.user_id = ?
-         AND uc.status = '사용 가능'
-         AND c.expire_at < NOW()`,
-      [userId],
-    );
+    await prisma.userCoupon.updateMany({
+      where: {
+        userId,
+        status: "사용 가능",
+        coupon: {
+          expireAt: { lt: new Date() },
+        },
+      },
+      data: {
+        status: "기간 만료",
+      },
+    });
 
-    // 2. 업데이트된 쿠폰 목록 불러오기
-    const [userCoupons] = await db.query(
-      `SELECT
-         uc.id AS id,
-         c.name,
-         uc.status,
-         TO_CHAR(c.expire_at, 'YYYY-MM-DD') AS expire
-       FROM user_coupons uc
-       JOIN coupons c ON uc.coupon_id = c.id
-       WHERE uc.user_id = ?`,
-      [userId],
-    );
+    const userCouponsRaw = await prisma.userCoupon.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        status: true,
+        coupon: {
+          select: {
+            name: true,
+            expireAt: true,
+          },
+        },
+      },
+    });
 
-    // 3. 더미 쿠폰 포함
-    const combinedCoupons = [...dummyCoupons, ...userCoupons];
+    const userCoupons = userCouponsRaw.map((row) => ({
+      id: row.id,
+      name: row.coupon.name,
+      status: row.status,
+      expire: row.coupon.expireAt.toISOString().slice(0, 10),
+    }));
+
+    const pointSummary = await prisma.pointHistory.aggregate({
+      where: { userId },
+      _sum: { amount: true },
+    });
+
+    const pointHistoryRows = await prisma.pointHistory.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        createdAt: true,
+      },
+    });
+
+    const pointHistory = pointHistoryRows.map((row) => ({
+      id: row.id,
+      date: row.createdAt.toISOString().slice(0, 10),
+      description: row.description,
+      amount: row.amount,
+    }));
 
     res.json({
-      point: dummyPoints.currentPoint,
-      history: dummyPoints.history,
-      coupons: combinedCoupons,
+      point: pointSummary._sum.amount || 0,
+      history: pointHistory,
+      coupons: userCoupons,
     });
   } catch (err) {
     console.error("포인트/쿠폰 불러오기 오류:", err);
@@ -87,33 +84,40 @@ router.post("/register", verifyToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const [couponRows] = await db.query(
-      "SELECT * FROM coupons WHERE code = ? AND expire_at > NOW()",
-      [code],
-    );
+    const coupon = await prisma.coupon.findFirst({
+      where: {
+        code,
+        expireAt: { gt: new Date() },
+      },
+    });
 
-    if (couponRows.length === 0) {
+    if (!coupon) {
       return res
         .status(400)
         .json({ message: "유효하지 않거나 만료된 쿠폰입니다" });
     }
 
-    const coupon = couponRows[0];
+    const existing = await prisma.userCoupon.findFirst({
+      where: {
+        userId,
+        couponId: coupon.id,
+      },
+      select: { id: true },
+    });
 
-    const [existing] = await db.query(
-      "SELECT * FROM user_coupons WHERE user_id = ? AND coupon_id = ?",
-      [userId, coupon.id],
-    );
-
-    if (existing.length > 0) {
+    if (existing) {
       return res.status(409).json({ message: "이미 등록된 쿠폰입니다." });
     }
 
     const uuid = crypto.randomUUID();
-    await db.query(
-      "INSERT INTO user_coupons (id, user_id, coupon_id, status, assigned_at) VALUES (?, ?, ?, '사용 가능', NOW())",
-      [uuid, userId, coupon.id],
-    );
+    await prisma.userCoupon.create({
+      data: {
+        id: uuid,
+        userId,
+        couponId: coupon.id,
+        status: "사용 가능",
+      },
+    });
 
     res.json({ message: "쿠폰이 등록되었습니다." });
   } catch (err) {

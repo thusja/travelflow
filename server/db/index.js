@@ -1,65 +1,34 @@
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const rawConnectionString =
+  process.env.DIRECT_URL ||
+  process.env.DATABASE_URL ||
+  "postgresql://postgres:postgres@localhost:5432/postgres?schema=public";
 
-const isReadQuery = (sql) => /^(\s*)(select|with)\b/i.test(sql);
+const connectionUrl = new URL(rawConnectionString);
 
-const toPgPlaceholders = (sql) => {
-  let index = 0;
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
+const createPrismaClient = () => {
+  const adapter = new PrismaPg({
+    host: connectionUrl.hostname,
+    port: Number(connectionUrl.port || 5432),
+    user: decodeURIComponent(connectionUrl.username),
+    password: decodeURIComponent(connectionUrl.password),
+    database: connectionUrl.pathname.replace(/^\//, ""),
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
 
-  let converted = "";
-  for (let i = 0; i < sql.length; i += 1) {
-    const char = sql[i];
-
-    if (char === "'" && !inDoubleQuote) {
-      const isEscaped = i > 0 && sql[i - 1] === "\\";
-      if (!isEscaped) {
-        inSingleQuote = !inSingleQuote;
-      }
-      converted += char;
-      continue;
-    }
-
-    if (char === '"' && !inSingleQuote) {
-      const isEscaped = i > 0 && sql[i - 1] === "\\";
-      if (!isEscaped) {
-        inDoubleQuote = !inDoubleQuote;
-      }
-      converted += char;
-      continue;
-    }
-
-    if (char === "?" && !inSingleQuote && !inDoubleQuote) {
-      index += 1;
-      converted += `$${index}`;
-      continue;
-    }
-
-    converted += char;
-  }
-
-  return converted;
+  return new PrismaClient({ adapter });
 };
 
-const db = {
-  async query(sql, params = []) {
-    const normalizedSql = toPgPlaceholders(sql);
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.__prisma ?? createPrismaClient();
 
-    if (isReadQuery(normalizedSql)) {
-      const rows = await prisma.$queryRawUnsafe(normalizedSql, ...params);
-      return [rows, undefined];
-    }
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.__prisma = prisma;
+}
 
-    const affectedRows = await prisma.$executeRawUnsafe(
-      normalizedSql,
-      ...params,
-    );
-    return [{ affectedRows }, undefined];
-  },
-
-  prisma,
-};
-
-export default db;
+export default prisma;
