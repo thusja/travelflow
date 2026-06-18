@@ -208,3 +208,29 @@ model JobRun {
   @@index([status])
   @@map("job_runs")
 }
+
+model TripPlan {
+  id          String   @id @db.Uuid
+  destination String   @db.VarChar(255)
+  travelDate  DateTime @map("travel_date") @db.Date
+  memo        String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([travelDate])
+  @@index([createdAt])
+  @@map("trip_plans")
+}
+
+model TravelSuggestion {
+  id          String   @id @db.Uuid
+  destination String   @db.VarChar(255)
+  content     String   @db.Text
+  status      String   @default("received") @db.VarChar(30)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("travel_suggestions")
+}

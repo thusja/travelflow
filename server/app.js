@@ -11,6 +11,8 @@ import usersRouter from "./routes/users.js";
 import reviewsRouter from "./routes/reviews.js";
 import pointAndCouponRouter from "./routes/pointAndCoupon.js";
 import utilsRouter from "./routes/utils.js";
+import plannerRouter from "./routes/planner.js";
+import suggestionsRouter from "./routes/suggestions.js";
 
 dotenv.config();
 
@@ -35,6 +37,8 @@ app.use("/api/packages", packagesRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/review", reviewsRouter);
 app.use("/api/points", pointAndCouponRouter);
+app.use("/api/planner", plannerRouter);
+app.use("/api/suggestions", suggestionsRouter);
 app.use("/api", utilsRouter);
 
 // 서버 시작
