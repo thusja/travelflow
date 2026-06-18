@@ -52,11 +52,9 @@ const startIdempotency = async ({
     });
 
     if (!existing) {
-      res
-        .status(409)
-        .json({
-          message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
-        });
+      res.status(409).json({
+        message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
+      });
       return { proceed: false, record: null };
     }
 
@@ -75,11 +73,9 @@ const startIdempotency = async ({
       return { proceed: false, record: null };
     }
 
-    res
-      .status(409)
-      .json({
-        message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
-      });
+    res.status(409).json({
+      message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
+    });
     return { proceed: false, record: null };
   }
 };
@@ -100,6 +96,24 @@ const finalizeIdempotency = async ({ record, statusCode, body, state }) => {
     })
     .catch(() => undefined);
 };
+
+router.get("/catalog", async (req, res) => {
+  try {
+    const packages = await prisma.package.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+      },
+    });
+
+    res.json(packages);
+  } catch (err) {
+    console.error("예약 카탈로그 조회 오류:", err);
+    res.status(500).json({ message: "예약 카탈로그 조회 실패" });
+  }
+});
 
 router.get("/", verifyToken, async (req, res) => {
   const userId = req.user.id;
@@ -183,6 +197,52 @@ router.get("/", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("예약 목록 조회 오류:", err);
     res.status(500).json({ message: "예약 목록 조회 실패" });
+  }
+});
+
+router.get("/:id", verifyToken, async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  try {
+    const booking = await prisma.booking.findFirst({
+      where: {
+        id,
+        userId,
+      },
+      select: {
+        id: true,
+        bookingDate: true,
+        status: true,
+        createdAt: true,
+        pkg: {
+          select: {
+            id: true,
+            title: true,
+            price: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ message: "예약 정보를 찾을 수 없습니다." });
+    }
+
+    res.json({
+      id: booking.id,
+      booking_date: booking.bookingDate,
+      status: booking.status,
+      created_at: booking.createdAt,
+      package: {
+        id: booking.pkg.id,
+        title: booking.pkg.title,
+        price: booking.pkg.price,
+      },
+    });
+  } catch (err) {
+    console.error("예약 상세 조회 오류:", err);
+    res.status(500).json({ message: "예약 상세 조회 실패" });
   }
 });
 
