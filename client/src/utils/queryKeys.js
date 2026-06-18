@@ -5,4 +5,10 @@ export const queryKeys = {
   bookings: {
     list: (params = {}) => ["bookings", "list", params],
   },
+  planner: {
+    list: (params = {}) => ["planner", "list", params],
+  },
+  suggestions: {
+    list: (params = {}) => ["suggestions", "list", params],
+  },
 };

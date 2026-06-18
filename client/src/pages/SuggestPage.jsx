@@ -1,24 +1,55 @@
 import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createTravelSuggestion,
+  getTravelSuggestions,
+} from "@/utils/api.js";
+import { queryKeys } from "@/utils/queryKeys.js";
+import LoadingState from "@/components/Common/LoadingState.jsx";
+import EmptyState from "@/components/Common/EmptyState.jsx";
+import ErrorState from "@/components/Common/ErrorState.jsx";
 
 const SuggestPage = () => {
   const [destination, setDestination] = useState('');
   const [suggestion, setSuggestion] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const queryClient = useQueryClient();
 
-  const handleSubmit = () => {
+  const {
+    data: suggestions = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.suggestions.list({ scope: "recent" }),
+    queryFn: getTravelSuggestions,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: createTravelSuggestion,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suggestions", "list"] });
+      setSuccessMessage('소중한 제안 감사합니다!');
+      setDestination('');
+      setSuggestion('');
+    },
+  });
+
+  const handleSubmit = async () => {
+    setSuccessMessage("");
     if (!destination || !suggestion) {
       alert('모든 항목을 입력해주세요.');
       return;
     }
 
-    console.log({
-      제안여행지: destination,
-      제안내용: suggestion,
-    });
-
-    setSuccessMessage('소중한 제안 감사합니다! 🙏');
-    setDestination('');
-    setSuggestion('');
+    try {
+      await createMutation.mutateAsync({
+        destination: destination.trim(),
+        suggestion: suggestion.trim(),
+      });
+    } catch (e) {
+      alert(e.message || "제안 제출 중 오류가 발생했습니다.");
+    }
   };
 
   return (
@@ -54,14 +85,38 @@ const SuggestPage = () => {
         <div className="text-center">
           <button
             onClick={handleSubmit}
+            disabled={createMutation.isPending}
             className="bg-black text-white px-6 py-2 rounded-md font-semibold hover:bg-gray-800"
           >
-            제안 제출하기
+            {createMutation.isPending ? "제출 중..." : "제안 제출하기"}
           </button>
         </div>
 
         {successMessage && (
           <p className="text-green-600 text-sm text-center">{successMessage}</p>
+        )}
+      </div>
+
+      <div className="bg-white p-6 shadow-md rounded-md space-y-3 mt-6">
+        <h2 className="text-xl font-semibold">최근 제안</h2>
+        {isLoading ? (
+          <LoadingState message="제안 목록을 불러오는 중..." />
+        ) : isError ? (
+          <ErrorState message={error?.message || "제안 목록 조회에 실패했습니다."} />
+        ) : suggestions.length === 0 ? (
+          <EmptyState message="등록된 제안이 없습니다." />
+        ) : (
+          <ul className="space-y-2">
+            {suggestions.slice(0, 5).map((item) => (
+              <li key={item.id} className="border rounded-md p-3 text-left">
+                <p className="font-semibold text-gray-800">{item.destination}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+                </p>
+                <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{item.content}</p>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
