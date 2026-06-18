@@ -3,7 +3,9 @@ import DatePicker from "react-datepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createPlannerPlan,
+  deletePlannerPlan,
   getPlannerPlans,
+  updatePlannerPlan,
 } from "@/utils/api.js";
 import { queryKeys } from "@/utils/queryKeys.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
@@ -17,6 +19,11 @@ const PlannerPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [formError, setFormError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [editingPlanId, setEditingPlanId] = useState("");
+  const [editDestination, setEditDestination] = useState("");
+  const [editTravelDate, setEditTravelDate] = useState("");
+  const [editMemo, setEditMemo] = useState("");
+  const [editFormError, setEditFormError] = useState("");
   const queryClient = useQueryClient();
 
   const {
@@ -37,6 +44,32 @@ const PlannerPage = () => {
       setStartDate(null);
       setDestination("");
       setPlanText("");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ planId, payload }) => updatePlannerPlan(planId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planner", "list"] });
+      setSuccessMessage("일정이 수정되었습니다.");
+      setEditingPlanId("");
+      setEditDestination("");
+      setEditTravelDate("");
+      setEditMemo("");
+      setEditFormError("");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deletePlannerPlan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planner", "list"] });
+      setSuccessMessage("일정이 삭제되었습니다.");
+      setEditingPlanId("");
+      setEditDestination("");
+      setEditTravelDate("");
+      setEditMemo("");
+      setEditFormError("");
     },
   });
 
@@ -71,6 +104,77 @@ const PlannerPage = () => {
       });
     } catch (e) {
       setSubmitError(e.message || "일정 저장 중 오류가 발생했습니다.");
+    }
+  };
+
+  const startEditing = (plan) => {
+    setSuccessMessage("");
+    setSubmitError("");
+    setEditFormError("");
+    setEditingPlanId(plan.id);
+    setEditDestination(plan.destination);
+    setEditTravelDate(new Date(plan.travelDate).toISOString().slice(0, 10));
+    setEditMemo(plan.memo);
+  };
+
+  const cancelEditing = () => {
+    setEditingPlanId("");
+    setEditDestination("");
+    setEditTravelDate("");
+    setEditMemo("");
+    setEditFormError("");
+  };
+
+  const handleEditSave = async () => {
+    setSuccessMessage("");
+    setSubmitError("");
+    setEditFormError("");
+
+    const normalizedDestination = editDestination.trim();
+    const normalizedMemo = editMemo.trim();
+
+    if (!editingPlanId || !normalizedDestination || !editTravelDate || !normalizedMemo) {
+      setEditFormError("모든 항목을 입력해주세요.");
+      return;
+    }
+
+    if (normalizedDestination.length > 100) {
+      setEditFormError("여행지는 100자 이하로 입력해주세요.");
+      return;
+    }
+
+    if (normalizedMemo.length > 2000) {
+      setEditFormError("일정 메모는 2000자 이하로 입력해주세요.");
+      return;
+    }
+
+    try {
+      await updateMutation.mutateAsync({
+        planId: editingPlanId,
+        payload: {
+          destination: normalizedDestination,
+          travelDate: editTravelDate,
+          memo: normalizedMemo,
+        },
+      });
+    } catch (e) {
+      setEditFormError(e.message || "일정 수정 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleDelete = async (planId) => {
+    setSuccessMessage("");
+    setSubmitError("");
+    setEditFormError("");
+
+    if (!window.confirm("해당 일정을 삭제하시겠어요?")) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync(planId);
+    } catch (e) {
+      setSubmitError(e.message || "일정 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -156,11 +260,81 @@ const PlannerPage = () => {
           <ul className="space-y-2">
             {plans.slice(0, 5).map((plan) => (
               <li key={plan.id} className="border rounded-md p-3 text-sm text-left">
-                <p className="font-semibold text-gray-800">{plan.destination}</p>
-                <p className="text-gray-500">
-                  {new Date(plan.travelDate).toLocaleDateString("ko-KR")}
-                </p>
-                <p className="text-gray-700 mt-1 whitespace-pre-wrap">{plan.memo}</p>
+                {editingPlanId === plan.id ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editDestination}
+                      onChange={(e) => {
+                        setEditDestination(e.target.value);
+                        setEditFormError("");
+                      }}
+                      maxLength={100}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    />
+                    <p className="text-xs text-gray-500 text-right">{editDestination.length}/100</p>
+                    <input
+                      type="date"
+                      value={editTravelDate}
+                      onChange={(e) => {
+                        setEditTravelDate(e.target.value);
+                        setEditFormError("");
+                      }}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    />
+                    <textarea
+                      rows={4}
+                      value={editMemo}
+                      onChange={(e) => {
+                        setEditMemo(e.target.value);
+                        setEditFormError("");
+                      }}
+                      maxLength={2000}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    />
+                    <p className="text-xs text-gray-500 text-right">{editMemo.length}/2000</p>
+                    {editFormError && <p className="text-red-600 text-xs">{editFormError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEditSave}
+                        disabled={updateMutation.isPending}
+                        className="px-3 py-1 rounded-md bg-black text-white disabled:opacity-60"
+                      >
+                        {updateMutation.isPending ? "수정 중..." : "수정 저장"}
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        disabled={updateMutation.isPending}
+                        className="px-3 py-1 rounded-md border border-gray-300 text-gray-700"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="font-semibold text-gray-800">{plan.destination}</p>
+                    <p className="text-gray-500">
+                      {new Date(plan.travelDate).toLocaleDateString("ko-KR")}
+                    </p>
+                    <p className="text-gray-700 mt-1 whitespace-pre-wrap">{plan.memo}</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => startEditing(plan)}
+                        className="px-3 py-1 rounded-md border border-gray-300 text-gray-700"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDelete(plan.id)}
+                        disabled={deleteMutation.isPending}
+                        className="px-3 py-1 rounded-md border border-red-200 text-red-600 disabled:opacity-60"
+                      >
+                        {deleteMutation.isPending ? "삭제 중..." : "삭제"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

@@ -28,6 +28,32 @@ export const createPlannerPlan = async (payload) => {
   return data;
 };
 
+export const updatePlannerPlan = async (planId, payload) => {
+  const res = await fetch(`http://localhost:5000/api/planner/${planId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "플래너 수정 실패");
+  }
+  return data;
+};
+
+export const deletePlannerPlan = async (planId) => {
+  const res = await fetch(`http://localhost:5000/api/planner/${planId}`, {
+    method: "DELETE",
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "플래너 삭제 실패");
+  }
+  return data;
+};
+
 export const getTravelSuggestions = async () => {
   const res = await fetch("http://localhost:5000/api/suggestions");
   const data = await res.json();
