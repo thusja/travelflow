@@ -3,8 +3,14 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
-const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/postgres?schema=public";
-const directUrl = process.env.DIRECT_URL || databaseUrl;
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
+const databaseUrl =
+  process.env.DIRECT_URL ||
+  process.env.DATABASE_URL ||
+  "postgresql://postgres:postgres@localhost:5432/postgres?schema=public";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -13,6 +19,5 @@ export default defineConfig({
   },
   datasource: {
     url: databaseUrl,
-    directUrl,
   },
 });

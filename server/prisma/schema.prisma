@@ -5,3 +5,134 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id            String    @id @db.Uuid
+  nickname      String    @db.VarChar(50)
+  firstname     String    @db.VarChar(100)
+  lastname      String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(255)
+  password      String    @db.VarChar(255)
+  phone         String?   @db.VarChar(30)
+  profileImage  String?   @map("profileimage") @db.Text
+  notifications Json?
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  bookings       Booking[]
+  reviews        Review[]
+  loginLogs      LoginLog[]
+  withdrawalLogs WithdrawalLog[]
+  userCoupons    UserCoupon[]
+
+  @@map("users")
+}
+
+model Package {
+  id          String   @id @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  price       Decimal? @db.Decimal(10, 2)
+  imageUrl    String?  @map("image_url") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  bookings Booking[]
+
+  @@map("packages")
+}
+
+model Booking {
+  id          String   @id @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  packageId   String   @map("package_id") @db.Uuid
+  bookingDate DateTime @map("booking_date") @db.Date
+  status      String   @default("pending") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pkg     Package  @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  reviews Review[]
+
+  @@index([userId])
+  @@index([packageId])
+  @@map("bookings")
+}
+
+model Review {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  bookingId String    @map("booking_id") @db.Uuid
+  rating    Int
+  comment   String?   @db.Text
+  imageUrl  String?   @map("image_url") @db.Text
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, userId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model Coupon {
+  id        String   @id @db.Uuid
+  name      String   @db.VarChar(255)
+  code      String   @unique @db.VarChar(100)
+  expireAt  DateTime @map("expire_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  userCoupons UserCoupon[]
+
+  @@map("coupons")
+}
+
+model UserCoupon {
+  id         String    @id @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  couponId   String    @map("coupon_id") @db.Uuid
+  status     String    @default("사용 가능") @db.VarChar(50)
+  assignedAt DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  usedAt     DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+  @@index([couponId])
+  @@map("user_coupons")
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id") @db.Uuid
+  ip        String?  @db.VarChar(100)
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("login_logs")
+}
+
+model WithdrawalLog {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id") @db.Uuid
+  reason    String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("withdrawal_logs")
+}
