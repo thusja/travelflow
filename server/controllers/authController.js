@@ -1,8 +1,51 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import prisma from "../db/index.js";
 import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
+
+const ACCESS_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
+const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || "14d";
+const REFRESH_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
+
+const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+const createAccessToken = (user) =>
+  jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      firstname: user.firstname,
+      lastname: user.lastname,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: ACCESS_EXPIRES_IN },
+  );
+
+const createRefreshToken = (user) => {
+  const token = jwt.sign(
+    {
+      id: user.id,
+      type: "refresh",
+      jti: crypto.randomUUID(),
+    },
+    REFRESH_SECRET,
+    { expiresIn: REFRESH_EXPIRES_IN },
+  );
+
+  const decoded = jwt.decode(token);
+  const expMs = decoded?.exp
+    ? decoded.exp * 1000
+    : Date.now() + 14 * 24 * 60 * 60 * 1000;
+
+  return {
+    token,
+    expiresAt: new Date(expMs),
+  };
+};
 
 // 회원가입 - 순수 저장만
 export const signup = async (req, res) => {
@@ -78,17 +121,18 @@ export const login = async (req, res) => {
       });
     }
 
-    // JWT 발급
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        firstname: user.firstname,
-        lastname: user.lastname,
+    const accessToken = createAccessToken(user);
+    const { token: refreshToken, expiresAt: refreshExpiresAt } =
+      createRefreshToken(user);
+
+    await prisma.refreshToken.create({
+      data: {
+        id: uuidv4(),
+        userId: user.id,
+        tokenHash: hashToken(refreshToken),
+        expiresAt: refreshExpiresAt,
       },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" },
-    );
+    });
 
     await prisma.loginLog.create({
       data: {
@@ -100,7 +144,9 @@ export const login = async (req, res) => {
 
     return res.status(200).json({
       message: "로그인 성공",
-      token,
+      token: accessToken,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         nickname: user.nickname,
@@ -118,6 +164,164 @@ export const login = async (req, res) => {
       status: 500,
       code: ERROR_CODES.INTERNAL_ERROR,
       message: "서버 에러",
+    });
+  }
+};
+
+export const refresh = async (req, res) => {
+  const { refreshToken } = req.body || {};
+
+  if (!refreshToken || typeof refreshToken !== "string") {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "refreshToken이 필요합니다.",
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
+    if (!decoded?.id || decoded?.type !== "refresh") {
+      return sendError(res, {
+        status: 401,
+        code: ERROR_CODES.AUTH_REFRESH_INVALID,
+        message: "유효하지 않은 refresh token 입니다.",
+      });
+    }
+
+    const currentHash = hashToken(refreshToken);
+    const current = await prisma.refreshToken.findFirst({
+      where: {
+        userId: decoded.id,
+        tokenHash: currentHash,
+      },
+    });
+
+    if (!current || current.revokedAt || current.expiresAt < new Date()) {
+      return sendError(res, {
+        status: 401,
+        code: ERROR_CODES.AUTH_REFRESH_INVALID,
+        message: "만료되었거나 폐기된 refresh token 입니다.",
+      });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        id: decoded.id,
+        isDeleted: false,
+      },
+    });
+
+    if (!user) {
+      return sendError(res, {
+        status: 401,
+        code: ERROR_CODES.AUTH_REFRESH_INVALID,
+        message: "사용자 세션이 유효하지 않습니다.",
+      });
+    }
+
+    const nextAccessToken = createAccessToken(user);
+    const { token: nextRefreshToken, expiresAt: nextRefreshExpiresAt } =
+      createRefreshToken(user);
+
+    const nextRefreshId = uuidv4();
+
+    await prisma.$transaction([
+      prisma.refreshToken.create({
+        data: {
+          id: nextRefreshId,
+          userId: user.id,
+          tokenHash: hashToken(nextRefreshToken),
+          expiresAt: nextRefreshExpiresAt,
+        },
+      }),
+      prisma.refreshToken.update({
+        where: { id: current.id },
+        data: {
+          revokedAt: new Date(),
+          replacedByTokenId: nextRefreshId,
+        },
+      }),
+    ]);
+
+    return res.status(200).json({
+      message: "토큰이 재발급되었습니다.",
+      token: nextAccessToken,
+      accessToken: nextAccessToken,
+      refreshToken: nextRefreshToken,
+    });
+  } catch (err) {
+    return sendError(res, {
+      status: 401,
+      code: ERROR_CODES.AUTH_REFRESH_INVALID,
+      message: "유효하지 않은 refresh token 입니다.",
+    });
+  }
+};
+
+export const logout = async (req, res) => {
+  const { refreshToken } = req.body || {};
+
+  if (!refreshToken || typeof refreshToken !== "string") {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "refreshToken이 필요합니다.",
+    });
+  }
+
+  try {
+    const tokenHash = hashToken(refreshToken);
+    await prisma.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return res.status(200).json({ message: "로그아웃되었습니다." });
+  } catch (err) {
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "로그아웃 처리에 실패했습니다.",
+    });
+  }
+};
+
+export const logoutAll = async (req, res) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return sendError(res, {
+      status: 401,
+      code: ERROR_CODES.AUTH_UNAUTHORIZED,
+      message: "인증 정보가 없습니다.",
+    });
+  }
+
+  try {
+    await prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return res
+      .status(200)
+      .json({ message: "모든 기기에서 로그아웃되었습니다." });
+  } catch (err) {
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "전체 로그아웃 처리에 실패했습니다.",
     });
   }
 };
