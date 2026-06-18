@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AiFillStar, AiOutlineStar } from "react-icons/ai";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const ReviewForm = () => {
   const { bookingId } = useParams();
@@ -32,7 +33,7 @@ const ReviewForm = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = getAccessToken();
 
     const formData = new FormData();
     formData.append("bookingId", bookingId);

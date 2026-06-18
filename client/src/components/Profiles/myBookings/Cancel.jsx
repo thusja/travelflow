@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getAccessToken } from "@/utils/authStorage.js";
+import LoadingState from "@/components/Common/LoadingState.jsx";
+import EmptyState from "@/components/Common/EmptyState.jsx";
+import ErrorState from "@/components/Common/ErrorState.jsx";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -20,10 +24,11 @@ const Cancel = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchCancelledBookings = async () => {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       if (!token) {
         setLoading(false);
         return;
@@ -53,7 +58,7 @@ const Cancel = () => {
         setRecords(mapped);
       } catch (err) {
         console.error("취소 목록 조회 오류:", err);
-        alert("취소/환불 내역을 불러오지 못했습니다.");
+        setError("취소/환불 내역을 불러오지 못했습니다.");
       } finally {
         setLoading(false);
       }
@@ -94,7 +99,11 @@ const Cancel = () => {
         취소 / 환불 내역
       </h2>
 
-      {loading && <p className="text-center text-gray-500 mb-4">불러오는 중...</p>}
+      {loading && <LoadingState message="불러오는 중..." />}
+      {!loading && error && <ErrorState message={error} />}
+      {!loading && !error && sorted.length === 0 && (
+        <EmptyState message="취소/환불 내역이 없습니다." />
+      )}
 
       {/* 필터 */}
       <div className="flex flex-wrap justify-center gap-2 mb-6">

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; // 상세 페이지 링크용
+import { getAccessToken } from "@/utils/authStorage.js";
+import LoadingState from "@/components/Common/LoadingState.jsx";
+import EmptyState from "@/components/Common/EmptyState.jsx";
+import ErrorState from "@/components/Common/ErrorState.jsx";
 
 const statusLabelMap = {
   confirmed: "예약 완료",
@@ -29,10 +33,11 @@ const History = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchBookings = async () => {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       if (!token) {
         setLoading(false);
         return;
@@ -62,7 +67,7 @@ const History = () => {
         setBookings(mapped);
       } catch (err) {
         console.error("예약 목록 불러오기 오류:", err);
-        alert("예약 목록을 불러오지 못했습니다.");
+        setError("예약 목록을 불러오지 못했습니다.");
       } finally {
         setLoading(false);
       }
@@ -75,7 +80,7 @@ const History = () => {
     const confirmed = window.confirm("해당 예약을 취소하시겠습니까?");
     if (!confirmed) return;
 
-    const token = localStorage.getItem("token");
+    const token = getAccessToken();
     const idempotencyKey = `cancel-ui-${bookingId}-${Date.now()}`;
 
     try {
@@ -103,7 +108,7 @@ const History = () => {
       alert("예약이 취소되었습니다.");
     } catch (err) {
       console.error("예약 취소 오류:", err);
-      alert("예약 취소 중 오류가 발생했습니다.");
+      setError("예약 취소 중 오류가 발생했습니다.");
     }
   };
 
@@ -137,7 +142,11 @@ const History = () => {
     <div className="p-6 max-w-5xl mx-auto bg-white rounded-2xl shadow-xl">
       <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">예약 요약</h2>
 
-      {loading && <p className="text-center text-gray-500 mb-4">불러오는 중...</p>}
+      {loading && <LoadingState message="불러오는 중..." />}
+      {!loading && error && <ErrorState message={error} />}
+      {!loading && !error && sortedBookings.length === 0 && (
+        <EmptyState message="예약 내역이 없습니다." />
+      )}
 
       {/* 필터 버튼 */}
       <div className="flex flex-wrap justify-center gap-2 mb-4">

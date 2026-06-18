@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import LoadingState from '@/components/Common/LoadingState.jsx';
+import EmptyState from '@/components/Common/EmptyState.jsx';
+import ErrorState from '@/components/Common/ErrorState.jsx';
 
 const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState('Hot Deals');
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const tabs = ['Hot Deals', 'Special Offers', 'Discounts'];
@@ -21,6 +25,7 @@ const Packages = () => {
         setPackages(data);
       } catch (err) {
         console.error("홈 패키지 조회 오류:", err);
+        setError("패키지 목록을 불러오지 못했습니다.");
       } finally {
         setLoading(false);
       }
@@ -75,7 +80,11 @@ const Packages = () => {
             transition={{ duration: 0.3 }}
           >
             {loading ? (
-              <p className="text-center text-gray-500">패키지를 불러오는 중...</p>
+              <LoadingState message="패키지를 불러오는 중..." />
+            ) : error ? (
+              <ErrorState message={error} />
+            ) : (tabPackages[selectedPackage] || []).length === 0 ? (
+              <EmptyState message="표시할 패키지가 없습니다." />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(tabPackages[selectedPackage] || []).map((pkg) => (

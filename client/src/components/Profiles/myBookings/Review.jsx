@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -13,7 +14,7 @@ const BookingReview = () => {
 
   useEffect(() => {
     const fetchReviewable = async () => {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       if (!token) {
         setLoading(false);
         return;

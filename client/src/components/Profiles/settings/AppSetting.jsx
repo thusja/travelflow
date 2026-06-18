@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { FaTrashAlt } from "react-icons/fa";
 import { MdDarkMode, MdLightMode, MdSettings } from "react-icons/md";
+import { clearAuthStorage } from "@/utils/authStorage.js";
 
 const AppSetting = () => {
   const [theme, setTheme] = useState("system");
@@ -38,7 +39,7 @@ const AppSetting = () => {
     let timer;
     const logout = () => {
       alert("자동 로그아웃 되었습니다.");
-      localStorage.removeItem("token");
+      clearAuthStorage();
       window.location.href = "/login";
     };
 
@@ -76,7 +77,12 @@ const AppSetting = () => {
 
   const handleClearCache = () => {
     if (window.confirm("캐시와 임시 저장소를 초기화하시겠습니까?")) {
-      localStorage.clear();
+      clearAuthStorage();
+      localStorage.removeItem("theme");
+      localStorage.removeItem("autoLogout");
+      localStorage.removeItem("language");
+      localStorage.removeItem("recentCities");
+      localStorage.removeItem("notifications");
       sessionStorage.clear();
       alert("저장소가 초기화되었습니다.");
     }

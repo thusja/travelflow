@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import dayjs from 'dayjs';
 import 'react-datepicker/dist/react-datepicker.css';
 import ko from 'date-fns/locale/ko';
+import { getAccessToken } from '@/utils/authStorage.js';
 
 const BookingLayout = () => {
   const [packages, setPackages] = useState([]);
@@ -40,7 +41,7 @@ const BookingLayout = () => {
     setError('');
     setSuccess('');
 
-    const token = localStorage.getItem("token");
+    const token = getAccessToken();
     if (!token) {
       setError("로그인 후 예약할 수 있습니다.");
       return;

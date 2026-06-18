@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { getAccessToken } from "@/utils/authStorage.js";
+import LoadingState from "@/components/Common/LoadingState.jsx";
+import ErrorState from "@/components/Common/ErrorState.jsx";
 
 const statusLabelMap = {
   confirmed: "예약 완료",
@@ -21,10 +24,11 @@ const BookingDetail = () => {
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchBooking = async () => {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       if (!token) {
         setLoading(false);
         return;
@@ -51,6 +55,7 @@ const BookingDetail = () => {
         });
       } catch (err) {
         console.error("예약 상세 조회 오류:", err);
+        setError("예약 정보를 불러오지 못했습니다.");
         setBooking(null);
       } finally {
         setLoading(false);
@@ -63,7 +68,7 @@ const BookingDetail = () => {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto bg-white shadow-md rounded-xl p-6 text-center">
-        <p className="text-gray-500">예약 정보를 불러오는 중...</p>
+        <LoadingState message="예약 정보를 불러오는 중..." />
       </div>
     );
   }
@@ -71,7 +76,11 @@ const BookingDetail = () => {
   if (!booking) {
     return (
       <div className="max-w-2xl mx-auto bg-white shadow-md rounded-xl p-6 text-center">
-        <h2 className="text-2xl font-bold mb-4">예약 정보를 찾을 수 없습니다.</h2>
+        {error ? (
+          <ErrorState message={error} />
+        ) : (
+          <h2 className="text-2xl font-bold mb-4">예약 정보를 찾을 수 없습니다.</h2>
+        )}
         <button
           onClick={() => navigate(-1)}
           className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"

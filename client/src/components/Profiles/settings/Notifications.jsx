@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MdSettings } from "react-icons/md";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const Notifications = () => {
   const [settings, setSettings] = useState({
@@ -25,7 +26,7 @@ const Notifications = () => {
     setSettings(updated);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       const res = await fetch("http://localhost:5000/api/users/notifications", {
         method: "PATCH",
         headers: {

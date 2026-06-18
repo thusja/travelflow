@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const Password = () => {
   const [step, setStep] = useState(1); // 1단계: 현재 비밀번호 확인
@@ -11,7 +12,7 @@ const Password = () => {
     if (!currentPassword) return alert("현재 비밀번호를 입력해주세요.");
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       const res = await fetch("http://localhost:5000/api/users/verify-password", {
         method: "POST",
         headers: {
@@ -42,7 +43,7 @@ const Password = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       const res = await fetch("http://localhost:5000/api/users/password", {
         method: "PUT",
         headers: {

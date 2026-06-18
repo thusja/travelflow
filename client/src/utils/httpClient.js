@@ -1,3 +1,11 @@
+import {
+  clearAuthStorage,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from "@/utils/authStorage.js";
+
 const API_BASE_URL = "http://localhost:5000/api";
 
 let interceptorInstalled = false;
@@ -32,16 +40,10 @@ const dispatchAuthFailure = () => {
   );
 };
 
-const clearAuthStorage = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
-};
-
 const requestTokenRefresh = async (nativeFetch) => {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const refreshToken = localStorage.getItem("refreshToken");
+      const refreshToken = getRefreshToken();
       if (!refreshToken) {
         throw new Error("refresh token missing");
       }
@@ -64,8 +66,8 @@ const requestTokenRefresh = async (nativeFetch) => {
         throw new Error("refresh response is invalid");
       }
 
-      localStorage.setItem("token", nextAccess);
-      localStorage.setItem("refreshToken", nextRefresh);
+      setAccessToken(nextAccess);
+      setRefreshToken(nextRefresh);
       return nextAccess;
     })().finally(() => {
       refreshPromise = null;
@@ -91,7 +93,7 @@ export const installAuthFetchInterceptor = () => {
     );
 
     if (apiRequest && !isBypassAuthPath(url) && !headers.has("Authorization")) {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
