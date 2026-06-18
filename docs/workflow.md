@@ -78,6 +78,15 @@ sequenceDiagram
 - 서버는 `bookingId, rating, comment, image`를 기대
 - 프론트는 `content` 필드를 전송(불일치)
 
+### 플래너/여행 제안 (MVP 보완)
+
+- 플래너
+  - 조회: `GET /api/planner`
+  - 저장: `POST /api/planner` (`destination`, `travelDate`, `memo`)
+- 여행 제안
+  - 조회: `GET /api/suggestions`
+  - 저장: `POST /api/suggestions` (`destination`, `suggestion`)
+
 ## 3) 현재 구조의 주요 병목
 
 - 동일 로그인 요청이 중복 수행되는 흐름 존재(폼/페이지 양쪽)
