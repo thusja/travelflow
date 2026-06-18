@@ -82,8 +82,88 @@ router.get("/", verifyToken, async (req, res) => {
 router.post("/register", verifyToken, async (req, res) => {
   const { code } = req.body;
   const userId = req.user.id;
+  const idempotencyKey = req.headers["idempotency-key"];
+
+  let idempotencyRecord = null;
+
+  const finalize = async (statusCode, body, state = "completed") => {
+    if (idempotencyRecord) {
+      await prisma.idempotencyRequest.update({
+        where: { id: idempotencyRecord.id },
+        data: {
+          state,
+          statusCode,
+          responseBody: body,
+        },
+      });
+    }
+
+    return res.status(statusCode).json(body);
+  };
 
   try {
+    if (idempotencyKey && typeof idempotencyKey === "string") {
+      const key = idempotencyKey.trim();
+      const path = "/api/points/register";
+      const method = "POST";
+      const requestHash = crypto
+        .createHash("sha256")
+        .update(JSON.stringify({ code: code ?? null }))
+        .digest("hex");
+
+      try {
+        idempotencyRecord = await prisma.idempotencyRequest.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId,
+            idempotencyKey: key,
+            method,
+            path,
+            requestHash,
+          },
+        });
+      } catch {
+        const existing = await prisma.idempotencyRequest.findFirst({
+          where: {
+            userId,
+            idempotencyKey: key,
+            method,
+            path,
+          },
+        });
+
+        if (!existing) {
+          return res
+            .status(409)
+            .json({
+              message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
+            });
+        }
+
+        if (existing.requestHash !== requestHash) {
+          return res.status(409).json({
+            message:
+              "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
+          });
+        }
+
+        if (
+          (existing.state === "completed" || existing.state === "failed") &&
+          existing.responseBody
+        ) {
+          return res
+            .status(existing.statusCode || 200)
+            .json(existing.responseBody);
+        }
+
+        return res
+          .status(409)
+          .json({
+            message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
+          });
+      }
+    }
+
     const coupon = await prisma.coupon.findFirst({
       where: {
         code,
@@ -92,9 +172,11 @@ router.post("/register", verifyToken, async (req, res) => {
     });
 
     if (!coupon) {
-      return res
-        .status(400)
-        .json({ message: "유효하지 않거나 만료된 쿠폰입니다" });
+      return finalize(
+        400,
+        { message: "유효하지 않거나 만료된 쿠폰입니다" },
+        "failed",
+      );
     }
 
     const existing = await prisma.userCoupon.findFirst({
@@ -106,7 +188,7 @@ router.post("/register", verifyToken, async (req, res) => {
     });
 
     if (existing) {
-      return res.status(409).json({ message: "이미 등록된 쿠폰입니다." });
+      return finalize(409, { message: "이미 등록된 쿠폰입니다." }, "failed");
     }
 
     const uuid = crypto.randomUUID();
@@ -119,9 +201,22 @@ router.post("/register", verifyToken, async (req, res) => {
       },
     });
 
-    res.json({ message: "쿠폰이 등록되었습니다." });
+    return finalize(200, { message: "쿠폰이 등록되었습니다." }, "completed");
   } catch (err) {
     console.error("쿠폰 등록 오류:", err);
+    if (idempotencyRecord) {
+      await prisma.idempotencyRequest
+        .update({
+          where: { id: idempotencyRecord.id },
+          data: {
+            state: "failed",
+            statusCode: 500,
+            responseBody: { message: "쿠폰 등록 중 오류 발생" },
+          },
+        })
+        .catch(() => undefined);
+    }
+
     res.status(500).json({ message: "쿠폰 등록 중 오류 발생" });
   }
 });

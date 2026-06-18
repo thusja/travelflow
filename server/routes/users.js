@@ -6,6 +6,12 @@ import bcrypt from "bcrypt";
 import { verifyToken } from "../middlewares/auth.js";
 import prisma from "../db/index.js";
 import {
+  createListMeta,
+  hasListQuery,
+  parsePageSize,
+  parseSort,
+} from "../utils/listQuery.js";
+import {
   deleteMe,
   updateNotifications,
   getMe,
@@ -211,28 +217,66 @@ router.put("/password", verifyToken, async (req, res) => {
 router.get("/logs", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const { filter = "", sort } = req.query;
+    const { page, size, skip, take } = parsePageSize(req.query);
+    const sortInfo = parseSort(sort, ["createdAt", "ip"], {
+      key: "createdAt",
+      direction: "desc",
+    });
+
+    const where = {
+      userId,
+      ...(filter && typeof filter === "string"
+        ? {
+            OR: [
+              {
+                ip: {
+                  contains: filter,
+                  mode: "insensitive",
+                },
+              },
+              {
+                userAgent: {
+                  contains: filter,
+                  mode: "insensitive",
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
     if (!userId) {
       return res.status(400).json({ message: "User ID가 존재하지 않습니다." });
     }
 
+    const total = await prisma.loginLog.count({ where });
+
     const logs = await prisma.loginLog.findMany({
-      where: {
-        userId,
-      },
+      where,
       orderBy: {
-        createdAt: "desc",
+        [sortInfo.key]: sortInfo.direction,
       },
+      skip,
+      take,
     });
 
-    res.status(200).json(
-      logs.map((log) => ({
-        id: log.id,
-        user_id: log.userId,
-        ip: log.ip,
-        user_agent: log.userAgent,
-        created_at: log.createdAt,
-      })),
-    );
+    const mapped = logs.map((log) => ({
+      id: log.id,
+      user_id: log.userId,
+      ip: log.ip,
+      user_agent: log.userAgent,
+      created_at: log.createdAt,
+    }));
+
+    if (hasListQuery(req.query)) {
+      return res.status(200).json({
+        items: mapped,
+        meta: createListMeta({ page, size, total }),
+      });
+    }
+
+    res.status(200).json(mapped);
   } catch (err) {
     console.error("로그인 기록 조회 오류:", err);
     res.status(500).json({ message: "서버 오류 발생" });

@@ -21,12 +21,13 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  bookings       Booking[]
-  reviews        Review[]
-  loginLogs      LoginLog[]
-  pointHistories PointHistory[]
-  withdrawalLogs WithdrawalLog[]
-  userCoupons    UserCoupon[]
+  bookings            Booking[]
+  reviews             Review[]
+  loginLogs           LoginLog[]
+  idempotencyRequests IdempotencyRequest[]
+  pointHistories      PointHistory[]
+  withdrawalLogs      WithdrawalLog[]
+  userCoupons         UserCoupon[]
 
   @@map("users")
 }
@@ -149,4 +150,24 @@ model PointHistory {
 
   @@index([userId])
   @@map("point_histories")
+}
+
+model IdempotencyRequest {
+  id             String   @id @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(255)
+  method         String   @db.VarChar(10)
+  path           String   @db.VarChar(255)
+  requestHash    String   @map("request_hash") @db.VarChar(128)
+  state          String   @default("pending") @db.VarChar(20)
+  statusCode     Int?     @map("status_code")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey, method, path])
+  @@index([createdAt])
+  @@map("idempotency_requests")
 }

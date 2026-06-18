@@ -7,6 +7,12 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import prisma from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
+import {
+  createListMeta,
+  hasListQuery,
+  parsePageSize,
+  parseSort,
+} from "../utils/listQuery.js";
 
 const router = express.Router();
 
@@ -78,13 +84,41 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
 router.get("/reviewable", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const { filter = "", sort } = req.query;
+    const { page, size, skip, take } = parsePageSize(req.query);
+
+    const sortInfo = parseSort(sort, ["bookingDate", "title"], {
+      key: "bookingDate",
+      direction: "desc",
+    });
+
+    const orderBy =
+      sortInfo.key === "title"
+        ? { pkg: { title: sortInfo.direction } }
+        : { bookingDate: sortInfo.direction };
+
+    const where = {
+      userId,
+      status: "completed",
+      ...(filter && typeof filter === "string"
+        ? {
+            pkg: {
+              title: {
+                contains: filter,
+                mode: "insensitive",
+              },
+            },
+          }
+        : {}),
+    };
+
+    const total = await prisma.booking.count({ where });
 
     const rows = await prisma.booking.findMany({
-      where: {
-        userId,
-        status: "completed",
-      },
-      orderBy: { bookingDate: "desc" },
+      where,
+      orderBy,
+      skip,
+      take,
       select: {
         id: true,
         bookingDate: true,
@@ -110,6 +144,13 @@ router.get("/reviewable", verifyToken, async (req, res) => {
       reviewId: row.reviews[0]?.id ?? null,
       reviewed: !!row.reviews[0]?.id,
     }));
+
+    if (hasListQuery(req.query)) {
+      return res.json({
+        items: result,
+        meta: createListMeta({ page, size, total }),
+      });
+    }
 
     res.json(result);
   } catch (err) {
