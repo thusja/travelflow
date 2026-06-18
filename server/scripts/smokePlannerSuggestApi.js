@@ -42,6 +42,32 @@ const main = async () => {
   const plannerList = await requestJson("/api/planner");
   const plannerTop = plannerList[0];
 
+  const plannerPutPayload = {
+    destination: "오사카",
+    travelDate: "2026-07-03",
+    memo: "업데이트된 스모크 일정",
+  };
+
+  const plannerPut = await requestJson(`/api/planner/${plannerPost.plan.id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(plannerPutPayload),
+  });
+
+  const plannerAfterUpdate = await requestJson("/api/planner");
+  const updatedPlan = plannerAfterUpdate.find(
+    (plan) => plan.id === plannerPost.plan.id,
+  );
+
+  await requestJson(`/api/planner/${plannerPost.plan.id}`, {
+    method: "DELETE",
+  });
+
+  const plannerAfterDelete = await requestJson("/api/planner");
+  const deletedPlan = plannerAfterDelete.find(
+    (plan) => plan.id === plannerPost.plan.id,
+  );
+
   const suggestionPost = await requestJson("/api/suggestions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -63,6 +89,22 @@ const main = async () => {
     plannerTop.destination,
   );
   assertEqual("plannerTop.memo", plannerPayload.memo, plannerTop.memo);
+  assertEqual(
+    "plannerPut.destination",
+    plannerPutPayload.destination,
+    plannerPut.plan.destination,
+  );
+  assertEqual("plannerPut.memo", plannerPutPayload.memo, plannerPut.plan.memo);
+  assertEqual(
+    "updatedPlan.destination",
+    plannerPutPayload.destination,
+    updatedPlan?.destination,
+  );
+  assertEqual("updatedPlan.memo", plannerPutPayload.memo, updatedPlan?.memo);
+
+  if (deletedPlan) {
+    throw new Error("planner delete failed: deleted plan still exists in list");
+  }
 
   assertEqual(
     "suggestion.destination",
@@ -86,6 +128,7 @@ const main = async () => {
   );
 
   console.log("[smoke] plannerPostId=" + plannerPost.plan.id);
+  console.log("[smoke] plannerUpdateDelete=PASS");
   console.log("[smoke] suggestionPostId=" + suggestionPost.suggestion.id);
   console.log("[smoke] utf8-check=PASS");
 };
