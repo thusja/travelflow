@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon .",
+    "smoke:planner-suggestions": "node scripts/smokePlannerSuggestApi.js",
     "seed:packages": "node scripts/syncPackagesFromJson.js",
     "policy:apply": "node scripts/applyPolicies.js --file sql/policies/20260618_rls_policies.sql",
     "policy:rollback": "node scripts/applyPolicies.js --file sql/policies/20260618_rls_policies.rollback.sql",

@@ -74,6 +74,7 @@
 - 메모: 쿠폰 등록([server/routes/pointAndCoupon.js](server/routes/pointAndCoupon.js)), 예약 생성/취소([server/routes/bookings.js](server/routes/bookings.js))에 Idempotency-Key + DB 저장(idempotency_requests) 적용 완료
 - 메모: wireframe/workflow 미완 MVP였던 플래너/여행 제안을 API+DB로 연결 완료([server/routes/planner.js](server/routes/planner.js), [server/routes/suggestions.js](server/routes/suggestions.js), [client/src/pages/PlannerPage.jsx](client/src/pages/PlannerPage.jsx), [client/src/pages/SuggestPage.jsx](client/src/pages/SuggestPage.jsx))
 - 메모: 스모크 테스트 완료(`POST/GET /api/planner`, `POST/GET /api/suggestions`) - 생성된 샘플 ID 확인(`9ceb0189-d9c1-4561-902b-fc986d7f687f`, `c6848216-56dc-4be2-99a4-53b8a0660d75`)
+- 메모: UTF-8 스모크 스크립트 추가([server/scripts/smokePlannerSuggestApi.js](server/scripts/smokePlannerSuggestApi.js), `npm run smoke:planner-suggestions`) 및 한글 payload 저장/조회 검증 PASS (샘플 ID: `38054d60-bd68-436d-8201-37fa9e6b7e9c`, `462578a0-da4a-4556-ac45-4e7bc8ac9e85`)
 
 ## 7) 상태 구조/클라이언트
 
