@@ -55,6 +55,8 @@
 - 서버 상태는 Query 캐시 단일화
 - UI 상태는 페이지 단위 local state 또는 경량 store 사용
 - 토큰 재발급은 단일 큐(중복 refresh 방지)로 처리
+- 도메인 데이터(예약/후기/포인트/플래너/여행제안)는 Supabase(PostgreSQL)를 단일 저장소(Source of Truth)로 사용
+- localStorage는 UI 편의 상태(테마/언어/최근 조회 등)만 사용하고, 도메인 영속 데이터 저장 용도로 사용하지 않음
 
 ## 2.2 권장 라이브러리
 
@@ -161,7 +163,7 @@ flowchart LR
 
 - localStorage
   - 유지: `theme`, `language`, `recentCities`
-  - 조건부 유지: `user` 최소 프로필(PII 최소화)
+  - 금지: 예약/후기/포인트/플래너/여행제안 등 도메인 엔티티 저장
 - memory only
   - `accessToken`, `isRefreshing`, refresh queue 상태
 - HttpOnly Cookie

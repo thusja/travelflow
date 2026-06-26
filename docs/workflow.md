@@ -101,6 +101,8 @@ sequenceDiagram
 - 클라이언트는 API 계약(요청/응답 타입)만 의존
 - 화면 상태와 서버 상태를 분리
 - DB 스키마 변경은 마이그레이션으로만 관리
+- 도메인 데이터 Source of Truth는 Supabase(PostgreSQL)로 고정
+- localStorage/sessionStorage는 UI 편의 상태에만 사용하고 도메인 데이터 영속 저장에는 사용하지 않음
 
 ### 개발 워크플로우
 

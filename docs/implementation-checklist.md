@@ -11,6 +11,7 @@
 - 메모: [docs/environment-strategy.md](docs/environment-strategy.md) 작성 및 [server/.env.development.example](server/.env.development.example), [server/.env.staging.example](server/.env.staging.example), [server/.env.production.example](server/.env.production.example) 템플릿 추가
 - [x] 기존 더미 데이터 제거 대상 목록 작성
 - 메모: 더미 전환 추적 문서 [docs/dummy-removal-targets.md](docs/dummy-removal-targets.md) 작성
+- 메모: 데이터 저장 원칙 고정 - 도메인 데이터는 Supabase(PostgreSQL) 단일 저장소를 사용하고 localStorage는 UI 보조 상태에만 사용([docs/state-structure.md](docs/state-structure.md), [docs/workflow.md](docs/workflow.md))
 - [x] 에러 코드 표준(`api-spec.md`) 기준으로 서버 응답 포맷 통일
 - 메모: [server/utils/apiResponse.js](server/utils/apiResponse.js) 공통 유틸 추가, 주요 라우트/컨트롤러에서 `success=false`, `error.code`, `message`, `meta` 에러 포맷 적용
 
