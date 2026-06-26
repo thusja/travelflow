@@ -85,6 +85,9 @@ const main = async () => {
 
   const suggestionList = await requestJson("/api/suggestions");
   const suggestionTop = suggestionList[0];
+  const reviewedSuggestions = await requestJson(
+    "/api/suggestions?status=reviewed",
+  );
 
   assertEqual(
     "planner.destination",
@@ -142,10 +145,21 @@ const main = async () => {
   );
   assertEqual("suggestionTop.status", "reviewed", suggestionTop.status);
 
+  if (
+    !reviewedSuggestions.some(
+      (item) => item.id === suggestionPost.suggestion.id,
+    )
+  ) {
+    throw new Error(
+      "suggestion filter failed: patched suggestion not found in reviewed list",
+    );
+  }
+
   console.log("[smoke] plannerPostId=" + plannerPost.plan.id);
   console.log("[smoke] plannerUpdateDelete=PASS");
   console.log("[smoke] suggestionPostId=" + suggestionPost.suggestion.id);
   console.log("[smoke] suggestionStatusPatch=PASS");
+  console.log("[smoke] suggestionStatusFilter=PASS");
   console.log("[smoke] utf8-check=PASS");
 };
 

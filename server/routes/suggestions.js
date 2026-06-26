@@ -9,8 +9,24 @@ const MAX_SUGGESTION_LENGTH = 2000;
 const ALLOWED_SUGGESTION_STATUSES = new Set(["received", "reviewed"]);
 
 router.get("/", async (req, res) => {
+  const rawStatus = String(req.query?.status ?? "").trim();
+
+  if (
+    rawStatus &&
+    rawStatus !== "all" &&
+    !ALLOWED_SUGGESTION_STATUSES.has(rawStatus)
+  ) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "status는 all, received, reviewed 중 하나여야 합니다.",
+    });
+  }
+
   try {
     const rows = await prisma.travelSuggestion.findMany({
+      where:
+        rawStatus && rawStatus !== "all" ? { status: rawStatus } : undefined,
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {
