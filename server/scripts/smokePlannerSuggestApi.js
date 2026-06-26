@@ -74,6 +74,15 @@ const main = async () => {
     body: JSON.stringify(suggestionPayload),
   });
 
+  const suggestionPatch = await requestJson(
+    `/api/suggestions/${suggestionPost.suggestion.id}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "reviewed" }),
+    },
+  );
+
   const suggestionList = await requestJson("/api/suggestions");
   const suggestionTop = suggestionList[0];
 
@@ -126,10 +135,17 @@ const main = async () => {
     suggestionPayload.suggestion,
     suggestionTop.content,
   );
+  assertEqual(
+    "suggestionPatch.status",
+    "reviewed",
+    suggestionPatch.suggestion.status,
+  );
+  assertEqual("suggestionTop.status", "reviewed", suggestionTop.status);
 
   console.log("[smoke] plannerPostId=" + plannerPost.plan.id);
   console.log("[smoke] plannerUpdateDelete=PASS");
   console.log("[smoke] suggestionPostId=" + suggestionPost.suggestion.id);
+  console.log("[smoke] suggestionStatusPatch=PASS");
   console.log("[smoke] utf8-check=PASS");
 };
 

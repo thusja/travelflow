@@ -6,6 +6,7 @@ import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
 const router = express.Router();
 const MAX_DESTINATION_LENGTH = 100;
 const MAX_SUGGESTION_LENGTH = 2000;
+const ALLOWED_SUGGESTION_STATUSES = new Set(["received", "reviewed"]);
 
 router.get("/", async (req, res) => {
   try {
@@ -16,6 +17,7 @@ router.get("/", async (req, res) => {
         id: true,
         destination: true,
         content: true,
+        status: true,
         createdAt: true,
       },
     });
@@ -71,6 +73,7 @@ router.post("/", async (req, res) => {
         id: true,
         destination: true,
         content: true,
+        status: true,
         createdAt: true,
       },
     });
@@ -85,6 +88,53 @@ router.post("/", async (req, res) => {
       status: 500,
       code: ERROR_CODES.INTERNAL_ERROR,
       message: "여행 제안 저장에 실패했습니다.",
+    });
+  }
+});
+
+router.patch("/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const normalizedStatus = String(req.body?.status ?? "").trim();
+
+  if (!ALLOWED_SUGGESTION_STATUSES.has(normalizedStatus)) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "status는 received 또는 reviewed여야 합니다.",
+    });
+  }
+
+  try {
+    const updated = await prisma.travelSuggestion.update({
+      where: { id },
+      data: { status: normalizedStatus },
+      select: {
+        id: true,
+        destination: true,
+        content: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    return res.json({
+      message: "여행 제안 상태가 변경되었습니다.",
+      suggestion: updated,
+    });
+  } catch (error) {
+    if (error?.code === "P2025") {
+      return sendError(res, {
+        status: 404,
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "해당 여행 제안을 찾을 수 없습니다.",
+      });
+    }
+
+    console.error("여행 제안 상태 변경 오류:", error);
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "여행 제안 상태 변경에 실패했습니다.",
     });
   }
 });
