@@ -429,6 +429,18 @@ const SuggestPage = () => {
     return filterCounts.reviewed;
   };
 
+  const statusSummaryLabel = (() => {
+    if (selectedStatuses.length === DEFAULT_SELECTED_STATUSES.length) {
+      return '전체';
+    }
+
+    return selectedStatuses
+      .map((status) => (status === 'reviewed' ? '검토 완료' : '접수됨'))
+      .join(', ');
+  })();
+
+  const sortSummaryLabel = sortOrder === 'latest' ? '최신순' : '오래된순';
+
   return (
     <div className="planner-suggest-shell min-h-screen">
       <h1 className="planner-suggest-title">여행 제안하기</h1>
@@ -536,6 +548,20 @@ const SuggestPage = () => {
             placeholder="여행지 또는 제안 내용으로 검색"
             className="planner-suggest-input"
           />
+        </div>
+
+        <div className="planner-suggest-filter-row">
+          <span className="planner-suggest-filter-chip planner-suggest-filter-chip--active">
+            상태: {statusSummaryLabel}
+          </span>
+          <span className="planner-suggest-filter-chip planner-suggest-filter-chip--active">
+            정렬: {sortSummaryLabel}
+          </span>
+          {searchKeyword.trim() ? (
+            <span className="planner-suggest-filter-chip planner-suggest-filter-chip--active">
+              검색: {searchKeyword.trim()}
+            </span>
+          ) : null}
         </div>
 
         {manageMessage && <p className="planner-suggest-feedback planner-suggest-feedback--success">{manageMessage}</p>}

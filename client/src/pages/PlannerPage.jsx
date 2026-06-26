@@ -288,6 +288,13 @@ const PlannerPage = () => {
     }
   };
 
+  const plannerSortSummaryLabel = {
+    "date-desc": "여행일 최신순",
+    "date-asc": "여행일 오래된순",
+    "created-desc": "등록 최신순",
+    "created-asc": "등록 오래된순",
+  }[sortOrder] || "여행일 최신순";
+
   return (
     <div className="planner-suggest-shell min-h-screen">
       <h1 className="planner-suggest-title">여행 일정 플래너</h1>
@@ -386,6 +393,16 @@ const PlannerPage = () => {
               {sort.label}
             </button>
           ))}
+        </div>
+        <div className="planner-suggest-filter-row">
+          <span className="planner-suggest-filter-chip planner-suggest-filter-chip--active">
+            정렬: {plannerSortSummaryLabel}
+          </span>
+          {searchKeyword.trim() ? (
+            <span className="planner-suggest-filter-chip planner-suggest-filter-chip--active">
+              검색: {searchKeyword.trim()}
+            </span>
+          ) : null}
         </div>
         {isLoading ? (
           <LoadingState message="일정을 불러오는 중..." />
