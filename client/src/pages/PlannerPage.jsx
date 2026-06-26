@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   createPlannerPlan,
   deletePlannerPlan,
@@ -12,7 +13,28 @@ import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
 
+const PLANNER_PAGE_SIZE = 5;
+const PLANNER_SEARCH_DEBOUNCE_MS = 250;
+const PLANNER_QUERY_SEARCH_KEY = "q";
+const PLANNER_QUERY_SORT_KEY = "sort";
+const ALLOWED_PLANNER_SORTS = new Set([
+  "date-desc",
+  "date-asc",
+  "created-desc",
+  "created-asc",
+]);
+
+const normalizePlannerSort = (value) => {
+  const normalized = String(value ?? "").trim();
+  return ALLOWED_PLANNER_SORTS.has(normalized) ? normalized : "date-desc";
+};
+
+const normalizePlannerKeyword = (searchParams) => {
+  return String(searchParams.get(PLANNER_QUERY_SEARCH_KEY) ?? "").trim();
+};
+
 const PlannerPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [startDate, setStartDate] = useState(null);
   const [destination, setDestination] = useState('');
   const [planText, setPlanText] = useState('');
@@ -24,18 +46,53 @@ const PlannerPage = () => {
   const [editTravelDate, setEditTravelDate] = useState("");
   const [editMemo, setEditMemo] = useState("");
   const [editFormError, setEditFormError] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [sortOrder, setSortOrder] = useState("date-desc");
+  const [searchInput, setSearchInput] = useState(() => normalizePlannerKeyword(searchParams));
+  const [searchKeyword, setSearchKeyword] = useState(() => normalizePlannerKeyword(searchParams));
+  const [sortOrder, setSortOrder] = useState(() => normalizePlannerSort(searchParams.get(PLANNER_QUERY_SORT_KEY)));
+  const [visibleCount, setVisibleCount] = useState(PLANNER_PAGE_SIZE);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchKeyword(searchInput);
-    }, 250);
+    }, PLANNER_SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    const normalizedKeyword = searchKeyword.trim();
+
+    if (normalizedKeyword) {
+      params.set(PLANNER_QUERY_SEARCH_KEY, normalizedKeyword);
+    }
+
+    if (sortOrder !== "date-desc") {
+      params.set(PLANNER_QUERY_SORT_KEY, sortOrder);
+    }
+
+    if (params.toString() !== searchParams.toString()) {
+      setSearchParams(params);
+    }
+  }, [searchKeyword, sortOrder, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const keywordFromUrl = normalizePlannerKeyword(searchParams);
+    const sortFromUrl = normalizePlannerSort(searchParams.get(PLANNER_QUERY_SORT_KEY));
+
+    if (keywordFromUrl !== searchInput) {
+      setSearchInput(keywordFromUrl);
+    }
+
+    if (keywordFromUrl !== searchKeyword) {
+      setSearchKeyword(keywordFromUrl);
+    }
+
+    if (sortFromUrl !== sortOrder) {
+      setSortOrder(sortFromUrl);
+    }
+  }, [searchParams]);
 
   const {
     data: plans = [],
@@ -46,6 +103,10 @@ const PlannerPage = () => {
     queryKey: queryKeys.planner.list({ scope: "recent" }),
     queryFn: getPlannerPlans,
   });
+
+  useEffect(() => {
+    setVisibleCount(PLANNER_PAGE_SIZE);
+  }, [searchKeyword, sortOrder, plans.length]);
 
   const createMutation = useMutation({
     mutationFn: createPlannerPlan,
@@ -336,7 +397,7 @@ const PlannerPage = () => {
           <EmptyState message="검색 결과가 없습니다." />
         ) : (
           <ul className="planner-suggest-list">
-            {visiblePlans.slice(0, 5).map((plan) => (
+            {visiblePlans.slice(0, visibleCount).map((plan) => (
               <li key={plan.id} className="planner-suggest-item">
                 {editingPlanId === plan.id ? (
                   <div className="space-y-2 text-sm">
@@ -417,6 +478,19 @@ const PlannerPage = () => {
                 )}
               </li>
             ))}
+
+            {visiblePlans.length > visibleCount && (
+              <li className="planner-suggest-item">
+                <div className="planner-suggest-actions justify-center">
+                  <button
+                    onClick={() => setVisibleCount((prev) => prev + PLANNER_PAGE_SIZE)}
+                    className="planner-suggest-btn planner-suggest-btn--ghost"
+                  >
+                    더보기
+                  </button>
+                </div>
+              </li>
+            )}
           </ul>
         )}
       </div>

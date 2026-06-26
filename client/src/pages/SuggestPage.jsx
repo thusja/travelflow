@@ -18,6 +18,7 @@ const DELETE_UNDO_WINDOW_MS = 5000;
 const DEFAULT_SELECTED_STATUSES = ['received', 'reviewed'];
 const SUGGESTIONS_PAGE_SIZE = 5;
 const SUGGEST_SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_QUERY_PARAM = 'q';
 
 const normalizeFilter = (value) => {
   const normalized = String(value ?? '').trim();
@@ -47,6 +48,10 @@ const normalizeStatuses = (searchParams) => {
   return [...DEFAULT_SELECTED_STATUSES];
 };
 
+const normalizeKeyword = (searchParams) => {
+  return String(searchParams.get(SEARCH_QUERY_PARAM) ?? '').trim();
+};
+
 const SuggestPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [destination, setDestination] = useState('');
@@ -57,8 +62,8 @@ const SuggestPage = () => {
   const [manageMessage, setManageMessage] = useState('');
   const [manageError, setManageError] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState(() => normalizeKeyword(searchParams));
+  const [searchKeyword, setSearchKeyword] = useState(() => normalizeKeyword(searchParams));
   const [visibleCount, setVisibleCount] = useState(SUGGESTIONS_PAGE_SIZE);
   const deleteCommitTimerRef = useRef(null);
 
@@ -124,6 +129,27 @@ const SuggestPage = () => {
   }, [searchInput]);
 
   useEffect(() => {
+    const keywordFromUrl = normalizeKeyword(searchParams);
+    if (keywordFromUrl === searchKeyword) {
+      return;
+    }
+
+    updateQueryParams(selectedStatuses, sortOrder, searchKeyword);
+  }, [searchKeyword, searchParams, selectedStatuses.join(','), sortOrder]);
+
+  useEffect(() => {
+    const keywordFromUrl = normalizeKeyword(searchParams);
+
+    if (keywordFromUrl !== searchInput) {
+      setSearchInput(keywordFromUrl);
+    }
+
+    if (keywordFromUrl !== searchKeyword) {
+      setSearchKeyword(keywordFromUrl);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     setVisibleCount(SUGGESTIONS_PAGE_SIZE);
   }, [selectedStatuses.join(','), sortOrder, allSuggestions.length]);
 
@@ -135,7 +161,7 @@ const SuggestPage = () => {
     };
   }, []);
 
-  const updateQueryParams = (nextStatuses, nextSort) => {
+  const updateQueryParams = (nextStatuses, nextSort, nextKeyword = searchKeyword) => {
     const params = {};
 
     const normalizedStatuses = [...new Set(nextStatuses)]
@@ -147,6 +173,10 @@ const SuggestPage = () => {
 
     if (nextSort !== 'latest') {
       params.sort = nextSort;
+    }
+
+    if (nextKeyword.trim()) {
+      params[SEARCH_QUERY_PARAM] = nextKeyword.trim();
     }
 
     setSearchParams(params);
