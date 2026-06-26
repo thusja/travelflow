@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   createTravelSuggestion,
   getTravelSuggestions,
@@ -10,8 +11,21 @@ import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
 
+const ALLOWED_FILTERS = new Set(['all', 'received', 'reviewed']);
+const ALLOWED_SORTS = new Set(['latest', 'oldest']);
+
+const normalizeFilter = (value) => {
+  const normalized = String(value ?? '').trim();
+  return ALLOWED_FILTERS.has(normalized) ? normalized : 'all';
+};
+
+const normalizeSort = (value) => {
+  const normalized = String(value ?? '').trim();
+  return ALLOWED_SORTS.has(normalized) ? normalized : 'latest';
+};
+
 const SuggestPage = () => {
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [destination, setDestination] = useState('');
   const [suggestion, setSuggestion] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -19,7 +33,10 @@ const SuggestPage = () => {
   const [submitError, setSubmitError] = useState('');
   const [manageMessage, setManageMessage] = useState('');
   const [manageError, setManageError] = useState('');
+
   const queryClient = useQueryClient();
+  const statusFilter = normalizeFilter(searchParams.get('status'));
+  const sortOrder = normalizeSort(searchParams.get('sort'));
 
   const {
     data: suggestions = [],
@@ -27,9 +44,60 @@ const SuggestPage = () => {
     isError,
     error,
   } = useQuery({
-    queryKey: queryKeys.suggestions.list({ scope: "recent", status: statusFilter }),
-    queryFn: () => getTravelSuggestions({ status: statusFilter }),
+    queryKey: queryKeys.suggestions.list({ scope: "recent", status: statusFilter, sort: sortOrder }),
+    queryFn: () => getTravelSuggestions({ status: statusFilter, sort: sortOrder }),
   });
+
+  const { data: allSuggestions = [] } = useQuery({
+    queryKey: queryKeys.suggestions.list({ scope: "recent", status: "all", sort: sortOrder }),
+    queryFn: () => getTravelSuggestions({ status: "all", sort: sortOrder }),
+  });
+
+  const filterCounts = useMemo(() => {
+    return allSuggestions.reduce(
+      (acc, item) => {
+        acc.all += 1;
+        if (item.status === 'reviewed') {
+          acc.reviewed += 1;
+        } else {
+          acc.received += 1;
+        }
+        return acc;
+      },
+      { all: 0, received: 0, reviewed: 0 },
+    );
+  }, [allSuggestions]);
+
+  useEffect(() => {
+    setManageMessage('');
+    setManageError('');
+  }, [statusFilter, sortOrder]);
+
+  const updateQueryParams = (nextStatus, nextSort) => {
+    const params = {};
+    if (nextStatus !== 'all') {
+      params.status = nextStatus;
+    }
+    if (nextSort !== 'latest') {
+      params.sort = nextSort;
+    }
+    setSearchParams(params);
+  };
+
+  const setStatusFilter = (nextFilter) => {
+    const normalized = normalizeFilter(nextFilter);
+    updateQueryParams(normalized, sortOrder);
+  };
+
+  const setSortOrder = (nextSort) => {
+    const normalized = normalizeSort(nextSort);
+    updateQueryParams(statusFilter, normalized);
+  };
+
+  const clearMessages = () => {
+    setManageMessage('');
+    setManageError('');
+  };
 
   const createMutation = useMutation({
     mutationFn: createTravelSuggestion,
@@ -44,14 +112,49 @@ const SuggestPage = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ suggestionId, status }) => updateTravelSuggestionStatus(suggestionId, status),
+    onMutate: async ({ suggestionId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ["suggestions", "list"] });
+
+      const previous = queryClient.getQueriesData({ queryKey: ["suggestions", "list"] });
+
+      queryClient.setQueriesData({ queryKey: ["suggestions", "list"] }, (old) => {
+        if (!Array.isArray(old)) {
+          return old;
+        }
+
+        return old.map((item) => {
+          if (item.id !== suggestionId) {
+            return item;
+          }
+
+          return {
+            ...item,
+            status,
+          };
+        });
+      });
+
+      return { previous };
+    },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["suggestions", "list"] });
       setManageError('');
       setManageMessage(
         variables.status === 'reviewed'
           ? '제안을 검토 완료로 변경했습니다.'
           : '제안을 접수 상태로 되돌렸습니다.',
       );
+    },
+    onError: (_error, _variables, context) => {
+      if (!context?.previous) {
+        return;
+      }
+
+      context.previous.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["suggestions", "list"] });
     },
   });
 
@@ -90,8 +193,7 @@ const SuggestPage = () => {
   };
 
   const handleToggleStatus = async (item) => {
-    setManageError('');
-    setManageMessage('');
+    clearMessages();
     setSubmitError('');
 
     const nextStatus = item.status === 'reviewed' ? 'received' : 'reviewed';
@@ -114,13 +216,25 @@ const SuggestPage = () => {
       : 'planner-suggest-status bg-amber-100 text-amber-700 border border-amber-200';
   };
 
+  const isItemStatusPending = (suggestionId) => {
+    return (
+      updateStatusMutation.isPending &&
+      updateStatusMutation.variables?.suggestionId === suggestionId
+    );
+  };
+
+  const getStatusCount = (status) => {
+    if (status === 'all') return filterCounts.all;
+    if (status === 'received') return filterCounts.received;
+    return filterCounts.reviewed;
+  };
+
   return (
     <div className="planner-suggest-shell min-h-screen">
       <h1 className="planner-suggest-title">여행 제안하기</h1>
       <p className="planner-suggest-subtitle">좋은 여행 아이디어를 공유하고 처리 상태를 관리하세요.</p>
 
       <div className="planner-suggest-card planner-suggest-card--primary">
-        {/* 여행지 입력 */}
         <div className="planner-suggest-field">
           <label className="planner-suggest-label">여행지 이름</label>
           <input
@@ -138,7 +252,6 @@ const SuggestPage = () => {
           <p className="planner-suggest-counter">{destination.length}/100</p>
         </div>
 
-        {/* 제안 내용 */}
         <div className="planner-suggest-field">
           <label className="planner-suggest-label">어떤 점이 좋을까요?</label>
           <textarea
@@ -156,7 +269,6 @@ const SuggestPage = () => {
           <p className="planner-suggest-counter">{suggestion.length}/2000</p>
         </div>
 
-        {/* 제출 버튼 */}
         <div className="planner-suggest-actions">
           <button
             onClick={handleSubmit}
@@ -176,26 +288,39 @@ const SuggestPage = () => {
 
       <div className="planner-suggest-card">
         <h2 className="text-lg font-bold">최근 제안 / 관리</h2>
+
         <div className="planner-suggest-filter-row">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`planner-suggest-filter-chip ${statusFilter === 'all' ? 'planner-suggest-filter-chip--active' : ''}`}
-          >
-            전체
-          </button>
-          <button
-            onClick={() => setStatusFilter('received')}
-            className={`planner-suggest-filter-chip ${statusFilter === 'received' ? 'planner-suggest-filter-chip--active' : ''}`}
-          >
-            접수됨
-          </button>
-          <button
-            onClick={() => setStatusFilter('reviewed')}
-            className={`planner-suggest-filter-chip ${statusFilter === 'reviewed' ? 'planner-suggest-filter-chip--active' : ''}`}
-          >
-            검토 완료
-          </button>
+          {['all', 'received', 'reviewed'].map((status) => (
+            <button
+              key={status}
+              onClick={() => {
+                clearMessages();
+                setStatusFilter(status);
+              }}
+              className={`planner-suggest-filter-chip ${statusFilter === status ? 'planner-suggest-filter-chip--active' : ''}`}
+            >
+              {status === 'all' ? '전체' : status === 'received' ? '접수됨' : '검토 완료'}
+              {' '}
+              <span className="planner-suggest-filter-count">{getStatusCount(status)}</span>
+            </button>
+          ))}
         </div>
+
+        <div className="planner-suggest-filter-row planner-suggest-sort-row">
+          {['latest', 'oldest'].map((sort) => (
+            <button
+              key={sort}
+              onClick={() => {
+                clearMessages();
+                setSortOrder(sort);
+              }}
+              className={`planner-suggest-filter-chip ${sortOrder === sort ? 'planner-suggest-filter-chip--active' : ''}`}
+            >
+              {sort === 'latest' ? '최신순' : '오래된순'}
+            </button>
+          ))}
+        </div>
+
         {manageMessage && <p className="planner-suggest-feedback planner-suggest-feedback--success">{manageMessage}</p>}
         {manageError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{manageError}</p>}
         {isLoading ? (
@@ -206,33 +331,37 @@ const SuggestPage = () => {
           <EmptyState message="등록된 제안이 없습니다." />
         ) : (
           <ul className="planner-suggest-list">
-            {suggestions.slice(0, 5).map((item) => (
-              <li key={item.id} className="planner-suggest-item">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="planner-suggest-item-title">{item.destination}</p>
-                  <span className={getStatusClasses(item.status)}>
-                    {getStatusLabel(item.status)}
-                  </span>
-                </div>
-                <p className="planner-suggest-item-date">
-                  {new Date(item.createdAt).toLocaleDateString("ko-KR")}
-                </p>
-                <p className="planner-suggest-item-content">{item.content}</p>
-                <div className="planner-suggest-actions justify-start">
-                  <button
-                    onClick={() => handleToggleStatus(item)}
-                    disabled={updateStatusMutation.isPending}
-                    className="planner-suggest-btn planner-suggest-btn--ghost"
-                  >
-                    {updateStatusMutation.isPending
-                      ? '상태 변경 중...'
-                      : item.status === 'reviewed'
-                        ? '접수 상태로 되돌리기'
-                        : '검토 완료로 변경'}
-                  </button>
-                </div>
-              </li>
-            ))}
+            {suggestions.slice(0, 5).map((item) => {
+              const isStatusPending = isItemStatusPending(item.id);
+
+              return (
+                <li key={item.id} className="planner-suggest-item">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="planner-suggest-item-title">{item.destination}</p>
+                    <span className={getStatusClasses(item.status)}>
+                      {getStatusLabel(item.status)}
+                    </span>
+                  </div>
+                  <p className="planner-suggest-item-date">
+                    {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+                  </p>
+                  <p className="planner-suggest-item-content">{item.content}</p>
+                  <div className="planner-suggest-actions justify-start">
+                    <button
+                      onClick={() => handleToggleStatus(item)}
+                      disabled={isStatusPending}
+                      className="planner-suggest-btn planner-suggest-btn--ghost"
+                    >
+                      {isStatusPending
+                        ? '상태 변경 중...'
+                        : item.status === 'reviewed'
+                          ? '접수 상태로 되돌리기'
+                          : '검토 완료로 변경'}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

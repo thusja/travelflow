@@ -185,6 +185,10 @@ body {
   gap: 0.45rem;
 }
 
+.planner-suggest-sort-row {
+  margin-top: 0.4rem;
+}
+
 .planner-suggest-filter-chip {
   border-radius: 999px;
   border: 1px solid #c8d5df;
@@ -200,6 +204,25 @@ body {
   background: #143e5b;
   border-color: #143e5b;
   color: #fff;
+}
+
+.planner-suggest-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  margin-left: 0.3rem;
+  padding: 0 0.24rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #143e5b;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.planner-suggest-filter-chip--active .planner-suggest-filter-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 
 .planner-suggest-item {

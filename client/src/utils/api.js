@@ -54,10 +54,16 @@ export const deletePlannerPlan = async (planId) => {
   return data;
 };
 
-export const getTravelSuggestions = async ({ status = "all" } = {}) => {
+export const getTravelSuggestions = async ({
+  status = "all",
+  sort = "latest",
+} = {}) => {
   const params = new URLSearchParams();
   if (status && status !== "all") {
     params.set("status", status);
+  }
+  if (sort && sort !== "latest") {
+    params.set("sort", sort);
   }
 
   const query = params.toString();
