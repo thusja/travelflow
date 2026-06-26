@@ -165,4 +165,37 @@ router.patch("/:id/status", async (req, res) => {
   }
 });
 
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await prisma.travelSuggestion.delete({
+      where: { id },
+      select: {
+        id: true,
+      },
+    });
+
+    return res.json({
+      message: "여행 제안이 삭제되었습니다.",
+      suggestion: deleted,
+    });
+  } catch (error) {
+    if (error?.code === "P2025") {
+      return sendError(res, {
+        status: 404,
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "해당 여행 제안을 찾을 수 없습니다.",
+      });
+    }
+
+    console.error("여행 제안 삭제 오류:", error);
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "여행 제안 삭제에 실패했습니다.",
+    });
+  }
+});
+
 export default router;

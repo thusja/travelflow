@@ -176,12 +176,28 @@ const main = async () => {
     throw new Error("suggestion sort failed: expected latest/oldest ordering");
   }
 
+  await requestJson(`/api/suggestions/${suggestionPost.suggestion.id}`, {
+    method: "DELETE",
+  });
+
+  const suggestionsAfterDelete = await requestJson("/api/suggestions");
+  const deletedSuggestion = suggestionsAfterDelete.find(
+    (item) => item.id === suggestionPost.suggestion.id,
+  );
+
+  if (deletedSuggestion) {
+    throw new Error(
+      "suggestion delete failed: deleted suggestion still exists in list",
+    );
+  }
+
   console.log("[smoke] plannerPostId=" + plannerPost.plan.id);
   console.log("[smoke] plannerUpdateDelete=PASS");
   console.log("[smoke] suggestionPostId=" + suggestionPost.suggestion.id);
   console.log("[smoke] suggestionStatusPatch=PASS");
   console.log("[smoke] suggestionStatusFilter=PASS");
   console.log("[smoke] suggestionSort=PASS");
+  console.log("[smoke] suggestionDelete=PASS");
   console.log("[smoke] utf8-check=PASS");
 };
 
