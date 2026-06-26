@@ -9,6 +9,11 @@ import {
   updatePlannerPlan,
 } from "@/utils/api.js";
 import { queryKeys } from "@/utils/queryKeys.js";
+import {
+  applySearchParamsIfChanged,
+  buildQueryParams,
+  normalizeEnumQueryParam,
+} from "@/utils/queryParamFilters.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
@@ -24,11 +29,6 @@ const ALLOWED_PLANNER_SORTS = new Set([
   "created-asc",
 ]);
 
-const normalizePlannerSort = (value) => {
-  const normalized = String(value ?? "").trim();
-  return ALLOWED_PLANNER_SORTS.has(normalized) ? normalized : "date-desc";
-};
-
 const PlannerPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [startDate, setStartDate] = useState(null);
@@ -42,7 +42,14 @@ const PlannerPage = () => {
   const [editTravelDate, setEditTravelDate] = useState("");
   const [editMemo, setEditMemo] = useState("");
   const [editFormError, setEditFormError] = useState("");
-  const [sortOrder, setSortOrder] = useState(() => normalizePlannerSort(searchParams.get(PLANNER_QUERY_SORT_KEY)));
+  const [sortOrder, setSortOrder] = useState(() =>
+    normalizeEnumQueryParam(
+      searchParams,
+      PLANNER_QUERY_SORT_KEY,
+      ALLOWED_PLANNER_SORTS,
+      "date-desc",
+    ),
+  );
   const [visibleCount, setVisibleCount] = useState(PLANNER_PAGE_SIZE);
   const queryClient = useQueryClient();
   const {
@@ -56,24 +63,21 @@ const PlannerPage = () => {
   });
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    const normalizedKeyword = searchKeyword.trim();
+    const params = buildQueryParams({
+      [PLANNER_QUERY_SEARCH_KEY]: searchKeyword.trim() || undefined,
+      [PLANNER_QUERY_SORT_KEY]: sortOrder !== "date-desc" ? sortOrder : undefined,
+    });
 
-    if (normalizedKeyword) {
-      params.set(PLANNER_QUERY_SEARCH_KEY, normalizedKeyword);
-    }
-
-    if (sortOrder !== "date-desc") {
-      params.set(PLANNER_QUERY_SORT_KEY, sortOrder);
-    }
-
-    if (params.toString() !== searchParams.toString()) {
-      setSearchParams(params);
-    }
+    applySearchParamsIfChanged(searchParams, setSearchParams, params);
   }, [searchKeyword, sortOrder, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const sortFromUrl = normalizePlannerSort(searchParams.get(PLANNER_QUERY_SORT_KEY));
+    const sortFromUrl = normalizeEnumQueryParam(
+      searchParams,
+      PLANNER_QUERY_SORT_KEY,
+      ALLOWED_PLANNER_SORTS,
+      "date-desc",
+    );
 
     if (sortFromUrl !== sortOrder) {
       setSortOrder(sortFromUrl);

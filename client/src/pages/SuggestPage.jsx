@@ -8,6 +8,13 @@ import {
   updateTravelSuggestionStatus,
 } from "@/utils/api.js";
 import { queryKeys } from "@/utils/queryKeys.js";
+import {
+  applySearchParamsIfChanged,
+  buildQueryParams,
+  normalizeCsvEnumQueryParam,
+  normalizeEnumParam,
+  normalizeEnumQueryParam,
+} from "@/utils/queryParamFilters.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
@@ -20,27 +27,23 @@ const DEFAULT_SELECTED_STATUSES = ['received', 'reviewed'];
 const SUGGESTIONS_PAGE_SIZE = 5;
 const SEARCH_QUERY_PARAM = 'q';
 
-const normalizeFilter = (value) => {
-  const normalized = String(value ?? '').trim();
-  return ALLOWED_FILTERS.has(normalized) ? normalized : 'all';
-};
-
-const normalizeSort = (value) => {
-  const normalized = String(value ?? '').trim();
-  return ALLOWED_SORTS.has(normalized) ? normalized : 'latest';
-};
-
 const normalizeStatuses = (searchParams) => {
-  const fromStatusesParam = String(searchParams.get('statuses') ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter((value) => value && value !== 'all' && ALLOWED_FILTERS.has(value));
+  const fromStatusesParam = normalizeCsvEnumQueryParam(
+    searchParams,
+    'statuses',
+    ALLOWED_FILTERS,
+  ).filter((value) => value !== 'all');
 
   if (fromStatusesParam.length > 0) {
     return [...new Set(fromStatusesParam)];
   }
 
-  const fromStatusParam = normalizeFilter(searchParams.get('status'));
+  const fromStatusParam = normalizeEnumQueryParam(
+    searchParams,
+    'status',
+    ALLOWED_FILTERS,
+    'all',
+  );
   if (fromStatusParam !== 'all') {
     return [fromStatusParam];
   }
@@ -72,7 +75,12 @@ const SuggestPage = () => {
     debounceMs: 250,
   });
   const selectedStatuses = normalizeStatuses(searchParams);
-  const sortOrder = normalizeSort(searchParams.get('sort'));
+  const sortOrder = normalizeEnumQueryParam(
+    searchParams,
+    'sort',
+    ALLOWED_SORTS,
+    'latest',
+  );
 
   const {
     data: allSuggestions = [],
@@ -140,35 +148,24 @@ const SuggestPage = () => {
   }, []);
 
   const updateQueryParams = (nextStatuses, nextSort, nextKeyword = searchKeyword) => {
-    const params = {};
-
     const normalizedStatuses = [...new Set(nextStatuses)]
       .filter((value) => value !== 'all' && ALLOWED_FILTERS.has(value));
 
-    if (normalizedStatuses.length > 0 && normalizedStatuses.length < DEFAULT_SELECTED_STATUSES.length) {
-      params.statuses = normalizedStatuses.join(',');
-    }
+    const params = buildQueryParams({
+      statuses:
+        normalizedStatuses.length > 0 &&
+        normalizedStatuses.length < DEFAULT_SELECTED_STATUSES.length
+          ? normalizedStatuses.join(',')
+          : undefined,
+      sort: nextSort !== 'latest' ? nextSort : undefined,
+      [SEARCH_QUERY_PARAM]: nextKeyword.trim() || undefined,
+    });
 
-    if (nextSort !== 'latest') {
-      params.sort = nextSort;
-    }
-
-    if (nextKeyword.trim()) {
-      params[SEARCH_QUERY_PARAM] = nextKeyword.trim();
-    }
-
-    const nextParams = new URLSearchParams(params).toString();
-    const currentParams = searchParams.toString();
-
-    if (nextParams === currentParams) {
-      return;
-    }
-
-    setSearchParams(params);
+    applySearchParamsIfChanged(searchParams, setSearchParams, params);
   };
 
   const toggleStatusFilter = (nextFilter) => {
-    const normalized = normalizeFilter(nextFilter);
+    const normalized = normalizeEnumParam(nextFilter, ALLOWED_FILTERS, 'all');
 
     if (normalized === 'all') {
       updateQueryParams(DEFAULT_SELECTED_STATUSES, sortOrder);
@@ -184,7 +181,7 @@ const SuggestPage = () => {
   };
 
   const setSortOrder = (nextSort) => {
-    const normalized = normalizeSort(nextSort);
+    const normalized = normalizeEnumParam(nextSort, ALLOWED_SORTS, 'latest');
     updateQueryParams(selectedStatuses, normalized);
   };
 
