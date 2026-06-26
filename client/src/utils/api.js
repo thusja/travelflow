@@ -54,8 +54,18 @@ export const deletePlannerPlan = async (planId) => {
   return data;
 };
 
-export const getTravelSuggestions = async () => {
-  const res = await fetch("http://localhost:5000/api/suggestions");
+export const getTravelSuggestions = async ({ status = "all" } = {}) => {
+  const params = new URLSearchParams();
+  if (status && status !== "all") {
+    params.set("status", status);
+  }
+
+  const query = params.toString();
+  const url = query
+    ? `http://localhost:5000/api/suggestions?${query}`
+    : "http://localhost:5000/api/suggestions";
+
+  const res = await fetch(url);
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.message || "여행 제안 목록 조회 실패");

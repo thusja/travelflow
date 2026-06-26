@@ -11,6 +11,7 @@ import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
 
 const SuggestPage = () => {
+  const [statusFilter, setStatusFilter] = useState('all');
   const [destination, setDestination] = useState('');
   const [suggestion, setSuggestion] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -26,8 +27,8 @@ const SuggestPage = () => {
     isError,
     error,
   } = useQuery({
-    queryKey: queryKeys.suggestions.list({ scope: "recent" }),
-    queryFn: getTravelSuggestions,
+    queryKey: queryKeys.suggestions.list({ scope: "recent", status: statusFilter }),
+    queryFn: () => getTravelSuggestions({ status: statusFilter }),
   });
 
   const createMutation = useMutation({
@@ -109,18 +110,19 @@ const SuggestPage = () => {
 
   const getStatusClasses = (status) => {
     return status === 'reviewed'
-      ? 'bg-green-100 text-green-700 border border-green-200'
-      : 'bg-amber-100 text-amber-700 border border-amber-200';
+      ? 'planner-suggest-status bg-green-100 text-green-700 border border-green-200'
+      : 'planner-suggest-status bg-amber-100 text-amber-700 border border-amber-200';
   };
 
   return (
-    <div className="pt-[80px] min-h-screen bg-gray-50 px-4 py-12 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-center mb-10">여행 제안하기</h1>
+    <div className="planner-suggest-shell min-h-screen">
+      <h1 className="planner-suggest-title">여행 제안하기</h1>
+      <p className="planner-suggest-subtitle">좋은 여행 아이디어를 공유하고 처리 상태를 관리하세요.</p>
 
-      <div className="bg-white p-6 shadow-md rounded-md space-y-6">
+      <div className="planner-suggest-card planner-suggest-card--primary">
         {/* 여행지 입력 */}
-        <div>
-          <label className="block font-medium mb-1">여행지 이름</label>
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">여행지 이름</label>
           <input
             type="text"
             value={destination}
@@ -131,14 +133,14 @@ const SuggestPage = () => {
             }}
             maxLength={100}
             placeholder="예: 삿포로, 치앙마이, 시칠리아"
-            className="w-full border border-gray-300 rounded-md px-4 py-2"
+            className="planner-suggest-input"
           />
-          <p className="text-xs text-gray-500 mt-1 text-right">{destination.length}/100</p>
+          <p className="planner-suggest-counter">{destination.length}/100</p>
         </div>
 
         {/* 제안 내용 */}
-        <div>
-          <label className="block font-medium mb-1">어떤 점이 좋을까요?</label>
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">어떤 점이 좋을까요?</label>
           <textarea
             rows={5}
             value={suggestion}
@@ -149,33 +151,53 @@ const SuggestPage = () => {
             }}
             maxLength={2000}
             placeholder="이 여행지를 왜 추천하시는지 자유롭게 작성해주세요."
-            className="w-full border border-gray-300 rounded-md px-4 py-2"
+            className="planner-suggest-textarea"
           />
-          <p className="text-xs text-gray-500 mt-1 text-right">{suggestion.length}/2000</p>
+          <p className="planner-suggest-counter">{suggestion.length}/2000</p>
         </div>
 
         {/* 제출 버튼 */}
-        <div className="text-center">
+        <div className="planner-suggest-actions">
           <button
             onClick={handleSubmit}
             disabled={createMutation.isPending}
-            className="bg-black text-white px-6 py-2 rounded-md font-semibold hover:bg-gray-800"
+            className="planner-suggest-btn planner-suggest-btn--primary"
           >
             {createMutation.isPending ? "제출 중..." : "제안 제출하기"}
           </button>
         </div>
 
         {successMessage && (
-          <p className="text-green-600 text-sm text-center">{successMessage}</p>
+          <p className="planner-suggest-feedback planner-suggest-feedback--success">{successMessage}</p>
         )}
-        {formError && <p className="text-red-600 text-sm text-center">{formError}</p>}
-        {submitError && <p className="text-red-600 text-sm text-center">{submitError}</p>}
+        {formError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{formError}</p>}
+        {submitError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{submitError}</p>}
       </div>
 
-      <div className="bg-white p-6 shadow-md rounded-md space-y-3 mt-6">
-        <h2 className="text-xl font-semibold">최근 제안 / 관리</h2>
-        {manageMessage && <p className="text-green-600 text-sm">{manageMessage}</p>}
-        {manageError && <p className="text-red-600 text-sm">{manageError}</p>}
+      <div className="planner-suggest-card">
+        <h2 className="text-lg font-bold">최근 제안 / 관리</h2>
+        <div className="planner-suggest-filter-row">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`planner-suggest-filter-chip ${statusFilter === 'all' ? 'planner-suggest-filter-chip--active' : ''}`}
+          >
+            전체
+          </button>
+          <button
+            onClick={() => setStatusFilter('received')}
+            className={`planner-suggest-filter-chip ${statusFilter === 'received' ? 'planner-suggest-filter-chip--active' : ''}`}
+          >
+            접수됨
+          </button>
+          <button
+            onClick={() => setStatusFilter('reviewed')}
+            className={`planner-suggest-filter-chip ${statusFilter === 'reviewed' ? 'planner-suggest-filter-chip--active' : ''}`}
+          >
+            검토 완료
+          </button>
+        </div>
+        {manageMessage && <p className="planner-suggest-feedback planner-suggest-feedback--success">{manageMessage}</p>}
+        {manageError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{manageError}</p>}
         {isLoading ? (
           <LoadingState message="제안 목록을 불러오는 중..." />
         ) : isError ? (
@@ -183,24 +205,24 @@ const SuggestPage = () => {
         ) : suggestions.length === 0 ? (
           <EmptyState message="등록된 제안이 없습니다." />
         ) : (
-          <ul className="space-y-2">
+          <ul className="planner-suggest-list">
             {suggestions.slice(0, 5).map((item) => (
-              <li key={item.id} className="border rounded-md p-3 text-left">
+              <li key={item.id} className="planner-suggest-item">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-semibold text-gray-800">{item.destination}</p>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getStatusClasses(item.status)}`}>
+                  <p className="planner-suggest-item-title">{item.destination}</p>
+                  <span className={getStatusClasses(item.status)}>
                     {getStatusLabel(item.status)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="planner-suggest-item-date">
                   {new Date(item.createdAt).toLocaleDateString("ko-KR")}
                 </p>
-                <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{item.content}</p>
-                <div className="mt-2">
+                <p className="planner-suggest-item-content">{item.content}</p>
+                <div className="planner-suggest-actions justify-start">
                   <button
                     onClick={() => handleToggleStatus(item)}
                     disabled={updateStatusMutation.isPending}
-                    className="px-3 py-1 rounded-md border border-gray-300 text-sm text-gray-700 disabled:opacity-60"
+                    className="planner-suggest-btn planner-suggest-btn--ghost"
                   >
                     {updateStatusMutation.isPending
                       ? '상태 변경 중...'

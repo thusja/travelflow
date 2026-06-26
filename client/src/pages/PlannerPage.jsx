@@ -179,24 +179,25 @@ const PlannerPage = () => {
   };
 
   return (
-    <div className="pt-[80px] min-h-screen bg-gray-50 px-4 py-12 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-center mb-10">여행 일정 플래너</h1>
+    <div className="planner-suggest-shell min-h-screen">
+      <h1 className="planner-suggest-title">여행 일정 플래너</h1>
+      <p className="planner-suggest-subtitle">나만의 일정 흐름을 기록하고 바로 수정해보세요.</p>
 
-      <div className="space-y-6 bg-white p-6 shadow-md rounded-md">
+      <div className="planner-suggest-card planner-suggest-card--primary">
         {/* 날짜 선택 */}
-        <div>
-          <label className="block font-medium mb-1">여행 날짜</label>
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">여행 날짜</label>
           <DatePicker
             selected={startDate}
             onChange={(date) => setStartDate(date)}
             placeholderText="날짜를 선택하세요"
-            className="w-full border border-gray-300 rounded-md px-4 py-2"
+            className="planner-suggest-date"
           />
         </div>
 
         {/* 여행지 */}
-        <div>
-          <label className="block font-medium mb-1">여행지</label>
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">여행지</label>
           <input
             type="text"
             value={destination}
@@ -207,14 +208,14 @@ const PlannerPage = () => {
             }}
             maxLength={100}
             placeholder="예 : 도쿄, 파리, 제주도"
-            className="w-full border border-gray-300 rounded-md px-4 py-2"
+            className="planner-suggest-input"
           />
-          <p className="text-xs text-gray-500 mt-1 text-right">{destination.length}/100</p>
+          <p className="planner-suggest-counter">{destination.length}/100</p>
         </div>
 
         {/* 일정 메모 */}
-        <div>
-          <label className="block font-medium mb-1">일정 메모</label>
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">일정 메모</label>
           <textarea
             rows={5}
             value={planText}
@@ -225,31 +226,31 @@ const PlannerPage = () => {
             }}
             maxLength={2000}
             placeholder="여기에 간단한 일정을 작성하세요"
-            className="w-full border border-gray-300 rounded-md px-4 py-2"
+            className="planner-suggest-textarea"
           />
-          <p className="text-xs text-gray-500 mt-1 text-right">{planText.length}/2000</p>
+          <p className="planner-suggest-counter">{planText.length}/2000</p>
         </div>
 
         {/* 버튼 */}
-        <div className="text-center">
+        <div className="planner-suggest-actions">
           <button
             onClick={handleSave}
             disabled={createMutation.isPending}
-            className="bg-black text-white px-6 py-2 rounded-md font-semibold hover:bg-gray-800 disabled:opacity-60"
+            className="planner-suggest-btn planner-suggest-btn--primary"
           >
             {createMutation.isPending ? "저장 중..." : "저장하기"}
           </button>
         </div>
 
         {successMessage && (
-          <p className="text-green-600 text-sm text-center">{successMessage}</p>
+          <p className="planner-suggest-feedback planner-suggest-feedback--success">{successMessage}</p>
         )}
-        {formError && <p className="text-red-600 text-sm text-center">{formError}</p>}
-        {submitError && <p className="text-red-600 text-sm text-center">{submitError}</p>}
+        {formError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{formError}</p>}
+        {submitError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{submitError}</p>}
       </div>
 
-      <div className="space-y-3 bg-white p-6 shadow-md rounded-md mt-6">
-        <h2 className="text-xl font-semibold">최근 저장된 일정</h2>
+      <div className="planner-suggest-card">
+        <h2 className="text-lg font-bold">최근 저장된 일정</h2>
         {isLoading ? (
           <LoadingState message="일정을 불러오는 중..." />
         ) : isError ? (
@@ -257,11 +258,11 @@ const PlannerPage = () => {
         ) : plans.length === 0 ? (
           <EmptyState message="저장된 일정이 없습니다." />
         ) : (
-          <ul className="space-y-2">
+          <ul className="planner-suggest-list">
             {plans.slice(0, 5).map((plan) => (
-              <li key={plan.id} className="border rounded-md p-3 text-sm text-left">
+              <li key={plan.id} className="planner-suggest-item">
                 {editingPlanId === plan.id ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-sm">
                     <input
                       type="text"
                       value={editDestination}
@@ -270,9 +271,9 @@ const PlannerPage = () => {
                         setEditFormError("");
                       }}
                       maxLength={100}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      className="planner-suggest-input"
                     />
-                    <p className="text-xs text-gray-500 text-right">{editDestination.length}/100</p>
+                    <p className="planner-suggest-counter">{editDestination.length}/100</p>
                     <input
                       type="date"
                       value={editTravelDate}
@@ -280,7 +281,7 @@ const PlannerPage = () => {
                         setEditTravelDate(e.target.value);
                         setEditFormError("");
                       }}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      className="planner-suggest-date"
                     />
                     <textarea
                       rows={4}
@@ -290,22 +291,24 @@ const PlannerPage = () => {
                         setEditFormError("");
                       }}
                       maxLength={2000}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      className="planner-suggest-textarea"
                     />
-                    <p className="text-xs text-gray-500 text-right">{editMemo.length}/2000</p>
-                    {editFormError && <p className="text-red-600 text-xs">{editFormError}</p>}
-                    <div className="flex gap-2">
+                    <p className="planner-suggest-counter">{editMemo.length}/2000</p>
+                    {editFormError && (
+                      <p className="planner-suggest-feedback planner-suggest-feedback--error">{editFormError}</p>
+                    )}
+                    <div className="planner-suggest-actions justify-start">
                       <button
                         onClick={handleEditSave}
                         disabled={updateMutation.isPending}
-                        className="px-3 py-1 rounded-md bg-black text-white disabled:opacity-60"
+                        className="planner-suggest-btn planner-suggest-btn--primary"
                       >
                         {updateMutation.isPending ? "수정 중..." : "수정 저장"}
                       </button>
                       <button
                         onClick={cancelEditing}
                         disabled={updateMutation.isPending}
-                        className="px-3 py-1 rounded-md border border-gray-300 text-gray-700"
+                        className="planner-suggest-btn planner-suggest-btn--ghost"
                       >
                         취소
                       </button>
@@ -313,22 +316,22 @@ const PlannerPage = () => {
                   </div>
                 ) : (
                   <>
-                    <p className="font-semibold text-gray-800">{plan.destination}</p>
-                    <p className="text-gray-500">
+                    <p className="planner-suggest-item-title">{plan.destination}</p>
+                    <p className="planner-suggest-item-date">
                       {new Date(plan.travelDate).toLocaleDateString("ko-KR")}
                     </p>
-                    <p className="text-gray-700 mt-1 whitespace-pre-wrap">{plan.memo}</p>
-                    <div className="mt-2 flex gap-2">
+                    <p className="planner-suggest-item-content">{plan.memo}</p>
+                    <div className="planner-suggest-actions justify-start">
                       <button
                         onClick={() => startEditing(plan)}
-                        className="px-3 py-1 rounded-md border border-gray-300 text-gray-700"
+                        className="planner-suggest-btn planner-suggest-btn--ghost"
                       >
                         수정
                       </button>
                       <button
                         onClick={() => handleDelete(plan.id)}
                         disabled={deleteMutation.isPending}
-                        className="px-3 py-1 rounded-md border border-red-200 text-red-600 disabled:opacity-60"
+                        className="planner-suggest-btn planner-suggest-btn--danger"
                       >
                         {deleteMutation.isPending ? "삭제 중..." : "삭제"}
                       </button>
