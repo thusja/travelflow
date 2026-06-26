@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,7 +24,18 @@ const PlannerPage = () => {
   const [editTravelDate, setEditTravelDate] = useState("");
   const [editMemo, setEditMemo] = useState("");
   const [editFormError, setEditFormError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [sortOrder, setSortOrder] = useState("date-desc");
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchKeyword(searchInput);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const {
     data: plans = [],
@@ -72,6 +83,44 @@ const PlannerPage = () => {
       setEditFormError("");
     },
   });
+
+  const visiblePlans = useMemo(() => {
+    const normalizedKeyword = searchKeyword.trim().toLowerCase();
+    const sorted = [...plans].sort((a, b) => {
+      const dateATime = new Date(a.travelDate).getTime();
+      const dateBTime = new Date(b.travelDate).getTime();
+      const createdATime = new Date(a.createdAt).getTime();
+      const createdBTime = new Date(b.createdAt).getTime();
+
+      if (
+        !Number.isFinite(dateATime) ||
+        !Number.isFinite(dateBTime) ||
+        !Number.isFinite(createdATime) ||
+        !Number.isFinite(createdBTime)
+      ) {
+        return 0;
+      }
+
+      if (sortOrder === "date-asc") return dateATime - dateBTime;
+      if (sortOrder === "created-desc") return createdBTime - createdATime;
+      if (sortOrder === "created-asc") return createdATime - createdBTime;
+
+      return dateBTime - dateATime;
+    });
+
+    if (!normalizedKeyword) {
+      return sorted;
+    }
+
+    return sorted.filter((plan) => {
+      const destination = String(plan.destination ?? "").toLowerCase();
+      const memo = String(plan.memo ?? "").toLowerCase();
+      return (
+        destination.includes(normalizedKeyword) ||
+        memo.includes(normalizedKeyword)
+      );
+    });
+  }, [plans, searchKeyword, sortOrder]);
 
   const handleSave = async () => {
     setSuccessMessage("");
@@ -251,15 +300,43 @@ const PlannerPage = () => {
 
       <div className="planner-suggest-card">
         <h2 className="text-lg font-bold">최근 저장된 일정</h2>
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">일정 검색</label>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="여행지 또는 메모로 검색"
+            className="planner-suggest-input"
+          />
+        </div>
+        <div className="planner-suggest-filter-row planner-suggest-sort-row">
+          {[
+            { key: "date-desc", label: "여행일 최신순" },
+            { key: "date-asc", label: "여행일 오래된순" },
+            { key: "created-desc", label: "등록 최신순" },
+            { key: "created-asc", label: "등록 오래된순" },
+          ].map((sort) => (
+            <button
+              key={sort.key}
+              onClick={() => setSortOrder(sort.key)}
+              className={`planner-suggest-filter-chip ${sortOrder === sort.key ? "planner-suggest-filter-chip--active" : ""}`}
+            >
+              {sort.label}
+            </button>
+          ))}
+        </div>
         {isLoading ? (
           <LoadingState message="일정을 불러오는 중..." />
         ) : isError ? (
           <ErrorState message={error?.message || "일정 조회에 실패했습니다."} />
         ) : plans.length === 0 ? (
           <EmptyState message="저장된 일정이 없습니다." />
+        ) : visiblePlans.length === 0 ? (
+          <EmptyState message="검색 결과가 없습니다." />
         ) : (
           <ul className="planner-suggest-list">
-            {plans.slice(0, 5).map((plan) => (
+            {visiblePlans.slice(0, 5).map((plan) => (
               <li key={plan.id} className="planner-suggest-item">
                 {editingPlanId === plan.id ? (
                   <div className="space-y-2 text-sm">

@@ -15,6 +15,9 @@ import ErrorState from "@/components/Common/ErrorState.jsx";
 const ALLOWED_FILTERS = new Set(['all', 'received', 'reviewed']);
 const ALLOWED_SORTS = new Set(['latest', 'oldest']);
 const DELETE_UNDO_WINDOW_MS = 5000;
+const DEFAULT_SELECTED_STATUSES = ['received', 'reviewed'];
+const SUGGESTIONS_PAGE_SIZE = 5;
+const SUGGEST_SEARCH_DEBOUNCE_MS = 250;
 
 const normalizeFilter = (value) => {
   const normalized = String(value ?? '').trim();
@@ -24,6 +27,24 @@ const normalizeFilter = (value) => {
 const normalizeSort = (value) => {
   const normalized = String(value ?? '').trim();
   return ALLOWED_SORTS.has(normalized) ? normalized : 'latest';
+};
+
+const normalizeStatuses = (searchParams) => {
+  const fromStatusesParam = String(searchParams.get('statuses') ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => value && value !== 'all' && ALLOWED_FILTERS.has(value));
+
+  if (fromStatusesParam.length > 0) {
+    return [...new Set(fromStatusesParam)];
+  }
+
+  const fromStatusParam = normalizeFilter(searchParams.get('status'));
+  if (fromStatusParam !== 'all') {
+    return [fromStatusParam];
+  }
+
+  return [...DEFAULT_SELECTED_STATUSES];
 };
 
 const SuggestPage = () => {
@@ -36,26 +57,43 @@ const SuggestPage = () => {
   const [manageMessage, setManageMessage] = useState('');
   const [manageError, setManageError] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [visibleCount, setVisibleCount] = useState(SUGGESTIONS_PAGE_SIZE);
   const deleteCommitTimerRef = useRef(null);
 
   const queryClient = useQueryClient();
-  const statusFilter = normalizeFilter(searchParams.get('status'));
+  const selectedStatuses = normalizeStatuses(searchParams);
   const sortOrder = normalizeSort(searchParams.get('sort'));
 
   const {
-    data: suggestions = [],
+    data: allSuggestions = [],
     isLoading,
     isError,
     error,
   } = useQuery({
-    queryKey: queryKeys.suggestions.list({ scope: "recent", status: statusFilter, sort: sortOrder }),
-    queryFn: () => getTravelSuggestions({ status: statusFilter, sort: sortOrder }),
-  });
-
-  const { data: allSuggestions = [] } = useQuery({
-    queryKey: queryKeys.suggestions.list({ scope: "recent", status: "all", sort: sortOrder }),
+    queryKey: queryKeys.suggestions.list({ scope: "recent", sort: sortOrder }),
     queryFn: () => getTravelSuggestions({ status: "all", sort: sortOrder }),
   });
+
+  const suggestionsByStatus = useMemo(() => {
+    const selectedSet = new Set(selectedStatuses);
+    return allSuggestions.filter((item) => selectedSet.has(item.status));
+  }, [allSuggestions, selectedStatuses]);
+
+  const suggestions = useMemo(() => {
+    const normalizedKeyword = searchKeyword.trim().toLowerCase();
+
+    if (!normalizedKeyword) {
+      return suggestionsByStatus;
+    }
+
+    return suggestionsByStatus.filter((item) => {
+      const destination = String(item.destination ?? '').toLowerCase();
+      const content = String(item.content ?? '').toLowerCase();
+      return destination.includes(normalizedKeyword) || content.includes(normalizedKeyword);
+    });
+  }, [suggestionsByStatus, searchKeyword]);
 
   const filterCounts = useMemo(() => {
     return allSuggestions.reduce(
@@ -75,7 +113,19 @@ const SuggestPage = () => {
   useEffect(() => {
     setManageMessage('');
     setManageError('');
-  }, [statusFilter, sortOrder]);
+  }, [selectedStatuses.join(','), sortOrder]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchKeyword(searchInput);
+    }, SUGGEST_SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setVisibleCount(SUGGESTIONS_PAGE_SIZE);
+  }, [selectedStatuses.join(','), sortOrder, allSuggestions.length]);
 
   useEffect(() => {
     return () => {
@@ -85,25 +135,42 @@ const SuggestPage = () => {
     };
   }, []);
 
-  const updateQueryParams = (nextStatus, nextSort) => {
+  const updateQueryParams = (nextStatuses, nextSort) => {
     const params = {};
-    if (nextStatus !== 'all') {
-      params.status = nextStatus;
+
+    const normalizedStatuses = [...new Set(nextStatuses)]
+      .filter((value) => value !== 'all' && ALLOWED_FILTERS.has(value));
+
+    if (normalizedStatuses.length > 0 && normalizedStatuses.length < DEFAULT_SELECTED_STATUSES.length) {
+      params.statuses = normalizedStatuses.join(',');
     }
+
     if (nextSort !== 'latest') {
       params.sort = nextSort;
     }
+
     setSearchParams(params);
   };
 
-  const setStatusFilter = (nextFilter) => {
+  const toggleStatusFilter = (nextFilter) => {
     const normalized = normalizeFilter(nextFilter);
-    updateQueryParams(normalized, sortOrder);
+
+    if (normalized === 'all') {
+      updateQueryParams(DEFAULT_SELECTED_STATUSES, sortOrder);
+      return;
+    }
+
+    const exists = selectedStatuses.includes(normalized);
+    const nextStatuses = exists
+      ? selectedStatuses.filter((value) => value !== normalized)
+      : [...selectedStatuses, normalized];
+
+    updateQueryParams(nextStatuses.length > 0 ? nextStatuses : DEFAULT_SELECTED_STATUSES, sortOrder);
   };
 
   const setSortOrder = (nextSort) => {
     const normalized = normalizeSort(nextSort);
-    updateQueryParams(statusFilter, normalized);
+    updateQueryParams(selectedStatuses, normalized);
   };
 
   const clearMessages = () => {
@@ -398,9 +465,15 @@ const SuggestPage = () => {
               key={status}
               onClick={() => {
                 clearMessages();
-                setStatusFilter(status);
+                toggleStatusFilter(status);
               }}
-              className={`planner-suggest-filter-chip ${statusFilter === status ? 'planner-suggest-filter-chip--active' : ''}`}
+              className={`planner-suggest-filter-chip ${
+                status === 'all'
+                  ? selectedStatuses.length === DEFAULT_SELECTED_STATUSES.length
+                  : selectedStatuses.includes(status)
+                    ? 'planner-suggest-filter-chip--active'
+                    : ''
+              }`}
             >
               {status === 'all' ? '전체' : status === 'received' ? '접수됨' : '검토 완료'}
               {' '}
@@ -424,6 +497,17 @@ const SuggestPage = () => {
           ))}
         </div>
 
+        <div className="planner-suggest-field">
+          <label className="planner-suggest-label">제안 검색</label>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="여행지 또는 제안 내용으로 검색"
+            className="planner-suggest-input"
+          />
+        </div>
+
         {manageMessage && <p className="planner-suggest-feedback planner-suggest-feedback--success">{manageMessage}</p>}
         {pendingDelete && (
           <div className="planner-suggest-actions justify-start">
@@ -441,10 +525,10 @@ const SuggestPage = () => {
         ) : isError ? (
           <ErrorState message={error?.message || "제안 목록 조회에 실패했습니다."} />
         ) : suggestions.length === 0 ? (
-          <EmptyState message="등록된 제안이 없습니다." />
+          <EmptyState message={searchKeyword.trim() ? "검색 결과가 없습니다." : "등록된 제안이 없습니다."} />
         ) : (
           <ul className="planner-suggest-list">
-            {suggestions.slice(0, 5).map((item) => {
+            {suggestions.slice(0, visibleCount).map((item) => {
               const isStatusPending = isItemStatusPending(item.id);
               const isDeletePending = isItemDeletePending(item.id);
 
@@ -483,6 +567,19 @@ const SuggestPage = () => {
                 </li>
               );
             })}
+
+            {suggestions.length > visibleCount && (
+              <li className="planner-suggest-item">
+                <div className="planner-suggest-actions justify-center">
+                  <button
+                    onClick={() => setVisibleCount((prev) => prev + SUGGESTIONS_PAGE_SIZE)}
+                    className="planner-suggest-btn planner-suggest-btn--ghost"
+                  >
+                    더보기
+                  </button>
+                </div>
+              </li>
+            )}
           </ul>
         )}
       </div>
