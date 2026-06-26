@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   createTravelSuggestion,
+  deleteTravelSuggestion,
   getTravelSuggestions,
   updateTravelSuggestionStatus,
 } from "@/utils/api.js";
@@ -13,6 +14,7 @@ import ErrorState from "@/components/Common/ErrorState.jsx";
 
 const ALLOWED_FILTERS = new Set(['all', 'received', 'reviewed']);
 const ALLOWED_SORTS = new Set(['latest', 'oldest']);
+const DELETE_UNDO_WINDOW_MS = 5000;
 
 const normalizeFilter = (value) => {
   const normalized = String(value ?? '').trim();
@@ -33,6 +35,8 @@ const SuggestPage = () => {
   const [submitError, setSubmitError] = useState('');
   const [manageMessage, setManageMessage] = useState('');
   const [manageError, setManageError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const deleteCommitTimerRef = useRef(null);
 
   const queryClient = useQueryClient();
   const statusFilter = normalizeFilter(searchParams.get('status'));
@@ -73,6 +77,14 @@ const SuggestPage = () => {
     setManageError('');
   }, [statusFilter, sortOrder]);
 
+  useEffect(() => {
+    return () => {
+      if (deleteCommitTimerRef.current) {
+        clearTimeout(deleteCommitTimerRef.current);
+      }
+    };
+  }, []);
+
   const updateQueryParams = (nextStatus, nextSort) => {
     const params = {};
     if (nextStatus !== 'all') {
@@ -97,6 +109,16 @@ const SuggestPage = () => {
   const clearMessages = () => {
     setManageMessage('');
     setManageError('');
+  };
+
+  const restoreSuggestionQueries = (previous) => {
+    if (!previous) {
+      return;
+    }
+
+    previous.forEach(([queryKey, data]) => {
+      queryClient.setQueryData(queryKey, data);
+    });
   };
 
   const createMutation = useMutation({
@@ -158,6 +180,10 @@ const SuggestPage = () => {
     },
   });
 
+  const deleteSuggestionMutation = useMutation({
+    mutationFn: ({ suggestionId }) => deleteTravelSuggestion(suggestionId),
+  });
+
   const handleSubmit = async () => {
     setSuccessMessage("");
     setManageMessage('');
@@ -208,6 +234,75 @@ const SuggestPage = () => {
     }
   };
 
+  const handleDeleteSuggestion = async (item) => {
+    clearMessages();
+    setSubmitError('');
+
+    if (pendingDelete) {
+      setManageError('삭제 대기 중인 제안이 있습니다. 먼저 취소하거나 잠시 기다려주세요.');
+      return;
+    }
+
+    if (!window.confirm('이 제안을 삭제하시겠어요?')) {
+      return;
+    }
+
+    try {
+      await queryClient.cancelQueries({ queryKey: ["suggestions", "list"] });
+
+      const previous = queryClient.getQueriesData({ queryKey: ["suggestions", "list"] });
+
+      queryClient.setQueriesData({ queryKey: ["suggestions", "list"] }, (old) => {
+        if (!Array.isArray(old)) {
+          return old;
+        }
+
+        return old.filter((currentItem) => currentItem.id !== item.id);
+      });
+
+      setPendingDelete({
+        suggestionId: item.id,
+        destination: item.destination,
+        previous,
+      });
+      setManageError('');
+      setManageMessage(`"${item.destination}" 제안을 삭제 대기 상태로 전환했습니다. 5초 내 취소할 수 있어요.`);
+
+      deleteCommitTimerRef.current = setTimeout(async () => {
+        try {
+          await deleteSuggestionMutation.mutateAsync({ suggestionId: item.id });
+          setManageError('');
+          setManageMessage(`"${item.destination}" 제안을 삭제했습니다.`);
+        } catch (e) {
+          restoreSuggestionQueries(previous);
+          setManageError(e.message || '제안 삭제 중 오류가 발생했습니다.');
+        } finally {
+          setPendingDelete((current) => (current?.suggestionId === item.id ? null : current));
+          deleteCommitTimerRef.current = null;
+          queryClient.invalidateQueries({ queryKey: ["suggestions", "list"] });
+        }
+      }, DELETE_UNDO_WINDOW_MS);
+    } catch (e) {
+      setManageError(e.message || '제안 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleUndoDelete = () => {
+    if (!pendingDelete) {
+      return;
+    }
+
+    if (deleteCommitTimerRef.current) {
+      clearTimeout(deleteCommitTimerRef.current);
+      deleteCommitTimerRef.current = null;
+    }
+
+    restoreSuggestionQueries(pendingDelete.previous);
+    setManageError('');
+    setManageMessage(`"${pendingDelete.destination}" 제안 삭제를 취소했습니다.`);
+    setPendingDelete(null);
+  };
+
   const getStatusLabel = (status) => (status === 'reviewed' ? '검토 완료' : '접수됨');
 
   const getStatusClasses = (status) => {
@@ -220,6 +315,14 @@ const SuggestPage = () => {
     return (
       updateStatusMutation.isPending &&
       updateStatusMutation.variables?.suggestionId === suggestionId
+    );
+  };
+
+  const isItemDeletePending = (suggestionId) => {
+    return (
+      pendingDelete?.suggestionId === suggestionId ||
+      deleteSuggestionMutation.isPending &&
+      deleteSuggestionMutation.variables?.suggestionId === suggestionId
     );
   };
 
@@ -322,6 +425,16 @@ const SuggestPage = () => {
         </div>
 
         {manageMessage && <p className="planner-suggest-feedback planner-suggest-feedback--success">{manageMessage}</p>}
+        {pendingDelete && (
+          <div className="planner-suggest-actions justify-start">
+            <button
+              onClick={handleUndoDelete}
+              className="planner-suggest-btn planner-suggest-btn--ghost"
+            >
+              삭제 취소
+            </button>
+          </div>
+        )}
         {manageError && <p className="planner-suggest-feedback planner-suggest-feedback--error">{manageError}</p>}
         {isLoading ? (
           <LoadingState message="제안 목록을 불러오는 중..." />
@@ -333,6 +446,7 @@ const SuggestPage = () => {
           <ul className="planner-suggest-list">
             {suggestions.slice(0, 5).map((item) => {
               const isStatusPending = isItemStatusPending(item.id);
+              const isDeletePending = isItemDeletePending(item.id);
 
               return (
                 <li key={item.id} className="planner-suggest-item">
@@ -349,7 +463,7 @@ const SuggestPage = () => {
                   <div className="planner-suggest-actions justify-start">
                     <button
                       onClick={() => handleToggleStatus(item)}
-                      disabled={isStatusPending}
+                      disabled={isStatusPending || isDeletePending}
                       className="planner-suggest-btn planner-suggest-btn--ghost"
                     >
                       {isStatusPending
@@ -357,6 +471,13 @@ const SuggestPage = () => {
                         : item.status === 'reviewed'
                           ? '접수 상태로 되돌리기'
                           : '검토 완료로 변경'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSuggestion(item)}
+                      disabled={isDeletePending || isStatusPending}
+                      className="planner-suggest-btn planner-suggest-btn--danger"
+                    >
+                      {isDeletePending ? '삭제 중...' : '삭제'}
                     </button>
                   </div>
                 </li>

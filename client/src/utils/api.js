@@ -111,3 +111,17 @@ export const updateTravelSuggestionStatus = async (suggestionId, status) => {
   }
   return data;
 };
+
+export const deleteTravelSuggestion = async (suggestionId) => {
+  const res = await fetch(
+    `http://localhost:5000/api/suggestions/${suggestionId}`,
+    {
+      method: "DELETE",
+    },
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "여행 제안 삭제 실패");
+  }
+  return data;
+};
