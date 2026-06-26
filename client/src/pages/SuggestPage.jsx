@@ -11,13 +11,13 @@ import { queryKeys } from "@/utils/queryKeys.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
+import useSyncedDebouncedQueryValue from "@/hooks/useSyncedDebouncedQueryValue.js";
 
 const ALLOWED_FILTERS = new Set(['all', 'received', 'reviewed']);
 const ALLOWED_SORTS = new Set(['latest', 'oldest']);
 const DELETE_UNDO_WINDOW_MS = 5000;
 const DEFAULT_SELECTED_STATUSES = ['received', 'reviewed'];
 const SUGGESTIONS_PAGE_SIZE = 5;
-const SUGGEST_SEARCH_DEBOUNCE_MS = 250;
 const SEARCH_QUERY_PARAM = 'q';
 
 const normalizeFilter = (value) => {
@@ -48,10 +48,6 @@ const normalizeStatuses = (searchParams) => {
   return [...DEFAULT_SELECTED_STATUSES];
 };
 
-const normalizeKeyword = (searchParams) => {
-  return String(searchParams.get(SEARCH_QUERY_PARAM) ?? '').trim();
-};
-
 const SuggestPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [destination, setDestination] = useState('');
@@ -62,12 +58,19 @@ const SuggestPage = () => {
   const [manageMessage, setManageMessage] = useState('');
   const [manageError, setManageError] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
-  const [searchInput, setSearchInput] = useState(() => normalizeKeyword(searchParams));
-  const [searchKeyword, setSearchKeyword] = useState(() => normalizeKeyword(searchParams));
   const [visibleCount, setVisibleCount] = useState(SUGGESTIONS_PAGE_SIZE);
   const deleteCommitTimerRef = useRef(null);
 
   const queryClient = useQueryClient();
+  const {
+    inputValue: searchInput,
+    setInputValue: setSearchInput,
+    debouncedValue: searchKeyword,
+  } = useSyncedDebouncedQueryValue({
+    searchParams,
+    queryKey: SEARCH_QUERY_PARAM,
+    debounceMs: 250,
+  });
   const selectedStatuses = normalizeStatuses(searchParams);
   const sortOrder = normalizeSort(searchParams.get('sort'));
 
@@ -121,33 +124,8 @@ const SuggestPage = () => {
   }, [selectedStatuses.join(','), sortOrder]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchKeyword(searchInput);
-    }, SUGGEST_SEARCH_DEBOUNCE_MS);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  useEffect(() => {
-    const keywordFromUrl = normalizeKeyword(searchParams);
-    if (keywordFromUrl === searchKeyword) {
-      return;
-    }
-
     updateQueryParams(selectedStatuses, sortOrder, searchKeyword);
-  }, [searchKeyword, searchParams, selectedStatuses.join(','), sortOrder]);
-
-  useEffect(() => {
-    const keywordFromUrl = normalizeKeyword(searchParams);
-
-    if (keywordFromUrl !== searchInput) {
-      setSearchInput(keywordFromUrl);
-    }
-
-    if (keywordFromUrl !== searchKeyword) {
-      setSearchKeyword(keywordFromUrl);
-    }
-  }, [searchParams]);
+  }, [searchKeyword]);
 
   useEffect(() => {
     setVisibleCount(SUGGESTIONS_PAGE_SIZE);
@@ -177,6 +155,13 @@ const SuggestPage = () => {
 
     if (nextKeyword.trim()) {
       params[SEARCH_QUERY_PARAM] = nextKeyword.trim();
+    }
+
+    const nextParams = new URLSearchParams(params).toString();
+    const currentParams = searchParams.toString();
+
+    if (nextParams === currentParams) {
+      return;
     }
 
     setSearchParams(params);

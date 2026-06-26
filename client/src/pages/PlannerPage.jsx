@@ -12,9 +12,9 @@ import { queryKeys } from "@/utils/queryKeys.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
+import useSyncedDebouncedQueryValue from "@/hooks/useSyncedDebouncedQueryValue.js";
 
 const PLANNER_PAGE_SIZE = 5;
-const PLANNER_SEARCH_DEBOUNCE_MS = 250;
 const PLANNER_QUERY_SEARCH_KEY = "q";
 const PLANNER_QUERY_SORT_KEY = "sort";
 const ALLOWED_PLANNER_SORTS = new Set([
@@ -27,10 +27,6 @@ const ALLOWED_PLANNER_SORTS = new Set([
 const normalizePlannerSort = (value) => {
   const normalized = String(value ?? "").trim();
   return ALLOWED_PLANNER_SORTS.has(normalized) ? normalized : "date-desc";
-};
-
-const normalizePlannerKeyword = (searchParams) => {
-  return String(searchParams.get(PLANNER_QUERY_SEARCH_KEY) ?? "").trim();
 };
 
 const PlannerPage = () => {
@@ -46,19 +42,18 @@ const PlannerPage = () => {
   const [editTravelDate, setEditTravelDate] = useState("");
   const [editMemo, setEditMemo] = useState("");
   const [editFormError, setEditFormError] = useState("");
-  const [searchInput, setSearchInput] = useState(() => normalizePlannerKeyword(searchParams));
-  const [searchKeyword, setSearchKeyword] = useState(() => normalizePlannerKeyword(searchParams));
   const [sortOrder, setSortOrder] = useState(() => normalizePlannerSort(searchParams.get(PLANNER_QUERY_SORT_KEY)));
   const [visibleCount, setVisibleCount] = useState(PLANNER_PAGE_SIZE);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchKeyword(searchInput);
-    }, PLANNER_SEARCH_DEBOUNCE_MS);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const {
+    inputValue: searchInput,
+    setInputValue: setSearchInput,
+    debouncedValue: searchKeyword,
+  } = useSyncedDebouncedQueryValue({
+    searchParams,
+    queryKey: PLANNER_QUERY_SEARCH_KEY,
+    debounceMs: 250,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -78,21 +73,12 @@ const PlannerPage = () => {
   }, [searchKeyword, sortOrder, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const keywordFromUrl = normalizePlannerKeyword(searchParams);
     const sortFromUrl = normalizePlannerSort(searchParams.get(PLANNER_QUERY_SORT_KEY));
-
-    if (keywordFromUrl !== searchInput) {
-      setSearchInput(keywordFromUrl);
-    }
-
-    if (keywordFromUrl !== searchKeyword) {
-      setSearchKeyword(keywordFromUrl);
-    }
 
     if (sortFromUrl !== sortOrder) {
       setSortOrder(sortFromUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, sortOrder]);
 
   const {
     data: plans = [],
