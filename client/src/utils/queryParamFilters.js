@@ -53,3 +53,34 @@ export const applySearchParamsIfChanged = (
 
   setSearchParams(nextParams);
 };
+
+export const normalizeSelectedStatusesFromQuery = ({
+  searchParams,
+  allowedSet,
+  defaultStatuses = [],
+  statusesKey = "statuses",
+  statusKey = "status",
+}) => {
+  const fromStatusesParam = normalizeCsvEnumQueryParam(
+    searchParams,
+    statusesKey,
+    allowedSet,
+  ).filter((value) => value !== "all");
+
+  if (fromStatusesParam.length > 0) {
+    return [...new Set(fromStatusesParam)];
+  }
+
+  const fromStatusParam = normalizeEnumQueryParam(
+    searchParams,
+    statusKey,
+    allowedSet,
+    "all",
+  );
+
+  if (fromStatusParam !== "all") {
+    return [fromStatusParam];
+  }
+
+  return [...defaultStatuses];
+};

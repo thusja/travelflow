@@ -11,9 +11,9 @@ import { queryKeys } from "@/utils/queryKeys.js";
 import {
   applySearchParamsIfChanged,
   buildQueryParams,
-  normalizeCsvEnumQueryParam,
   normalizeEnumParam,
   normalizeEnumQueryParam,
+  normalizeSelectedStatusesFromQuery,
 } from "@/utils/queryParamFilters.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
@@ -26,30 +26,6 @@ const DELETE_UNDO_WINDOW_MS = 5000;
 const DEFAULT_SELECTED_STATUSES = ['received', 'reviewed'];
 const SUGGESTIONS_PAGE_SIZE = 5;
 const SEARCH_QUERY_PARAM = 'q';
-
-const normalizeStatuses = (searchParams) => {
-  const fromStatusesParam = normalizeCsvEnumQueryParam(
-    searchParams,
-    'statuses',
-    ALLOWED_FILTERS,
-  ).filter((value) => value !== 'all');
-
-  if (fromStatusesParam.length > 0) {
-    return [...new Set(fromStatusesParam)];
-  }
-
-  const fromStatusParam = normalizeEnumQueryParam(
-    searchParams,
-    'status',
-    ALLOWED_FILTERS,
-    'all',
-  );
-  if (fromStatusParam !== 'all') {
-    return [fromStatusParam];
-  }
-
-  return [...DEFAULT_SELECTED_STATUSES];
-};
 
 const SuggestPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,7 +50,11 @@ const SuggestPage = () => {
     queryKey: SEARCH_QUERY_PARAM,
     debounceMs: 250,
   });
-  const selectedStatuses = normalizeStatuses(searchParams);
+  const selectedStatuses = normalizeSelectedStatusesFromQuery({
+    searchParams,
+    allowedSet: ALLOWED_FILTERS,
+    defaultStatuses: DEFAULT_SELECTED_STATUSES,
+  });
   const sortOrder = normalizeEnumQueryParam(
     searchParams,
     'sort',
