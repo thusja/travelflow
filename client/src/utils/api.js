@@ -77,3 +77,21 @@ export const createTravelSuggestion = async (payload) => {
   }
   return data;
 };
+
+export const updateTravelSuggestionStatus = async (suggestionId, status) => {
+  const res = await fetch(
+    `http://localhost:5000/api/suggestions/${suggestionId}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    },
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "여행 제안 상태 변경 실패");
+  }
+  return data;
+};

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createTravelSuggestion,
   getTravelSuggestions,
+  updateTravelSuggestionStatus,
 } from "@/utils/api.js";
 import { queryKeys } from "@/utils/queryKeys.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
@@ -15,6 +16,8 @@ const SuggestPage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [formError, setFormError] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [manageMessage, setManageMessage] = useState('');
+  const [manageError, setManageError] = useState('');
   const queryClient = useQueryClient();
 
   const {
@@ -34,11 +37,26 @@ const SuggestPage = () => {
       setSuccessMessage('소중한 제안 감사합니다!');
       setDestination('');
       setSuggestion('');
+      setManageError('');
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ suggestionId, status }) => updateTravelSuggestionStatus(suggestionId, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["suggestions", "list"] });
+      setManageError('');
+      setManageMessage(
+        variables.status === 'reviewed'
+          ? '제안을 검토 완료로 변경했습니다.'
+          : '제안을 접수 상태로 되돌렸습니다.',
+      );
     },
   });
 
   const handleSubmit = async () => {
     setSuccessMessage("");
+    setManageMessage('');
     setFormError('');
     setSubmitError('');
 
@@ -68,6 +86,31 @@ const SuggestPage = () => {
     } catch (e) {
       setSubmitError(e.message || "제안 제출 중 오류가 발생했습니다.");
     }
+  };
+
+  const handleToggleStatus = async (item) => {
+    setManageError('');
+    setManageMessage('');
+    setSubmitError('');
+
+    const nextStatus = item.status === 'reviewed' ? 'received' : 'reviewed';
+
+    try {
+      await updateStatusMutation.mutateAsync({
+        suggestionId: item.id,
+        status: nextStatus,
+      });
+    } catch (e) {
+      setManageError(e.message || '상태 변경 중 오류가 발생했습니다.');
+    }
+  };
+
+  const getStatusLabel = (status) => (status === 'reviewed' ? '검토 완료' : '접수됨');
+
+  const getStatusClasses = (status) => {
+    return status === 'reviewed'
+      ? 'bg-green-100 text-green-700 border border-green-200'
+      : 'bg-amber-100 text-amber-700 border border-amber-200';
   };
 
   return (
@@ -130,7 +173,9 @@ const SuggestPage = () => {
       </div>
 
       <div className="bg-white p-6 shadow-md rounded-md space-y-3 mt-6">
-        <h2 className="text-xl font-semibold">최근 제안</h2>
+        <h2 className="text-xl font-semibold">최근 제안 / 관리</h2>
+        {manageMessage && <p className="text-green-600 text-sm">{manageMessage}</p>}
+        {manageError && <p className="text-red-600 text-sm">{manageError}</p>}
         {isLoading ? (
           <LoadingState message="제안 목록을 불러오는 중..." />
         ) : isError ? (
@@ -141,11 +186,29 @@ const SuggestPage = () => {
           <ul className="space-y-2">
             {suggestions.slice(0, 5).map((item) => (
               <li key={item.id} className="border rounded-md p-3 text-left">
-                <p className="font-semibold text-gray-800">{item.destination}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-gray-800">{item.destination}</p>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getStatusClasses(item.status)}`}>
+                    {getStatusLabel(item.status)}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500">
                   {new Date(item.createdAt).toLocaleDateString("ko-KR")}
                 </p>
                 <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{item.content}</p>
+                <div className="mt-2">
+                  <button
+                    onClick={() => handleToggleStatus(item)}
+                    disabled={updateStatusMutation.isPending}
+                    className="px-3 py-1 rounded-md border border-gray-300 text-sm text-gray-700 disabled:opacity-60"
+                  >
+                    {updateStatusMutation.isPending
+                      ? '상태 변경 중...'
+                      : item.status === 'reviewed'
+                        ? '접수 상태로 되돌리기'
+                        : '검토 완료로 변경'}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

@@ -76,6 +76,7 @@
 - 메모: 스모크 테스트 완료(`POST/GET /api/planner`, `POST/GET /api/suggestions`) - 생성된 샘플 ID 확인(`9ceb0189-d9c1-4561-902b-fc986d7f687f`, `c6848216-56dc-4be2-99a4-53b8a0660d75`)
 - 메모: UTF-8 스모크 스크립트 추가([server/scripts/smokePlannerSuggestApi.js](server/scripts/smokePlannerSuggestApi.js), `npm run smoke:planner-suggestions`) 및 한글 payload 저장/조회 검증 PASS (샘플 ID: `38054d60-bd68-436d-8201-37fa9e6b7e9c`, `462578a0-da4a-4556-ac45-4e7bc8ac9e85`)
 - 메모: 플래너 수정/삭제 MVP 반영(`PUT /api/planner/:id`, `DELETE /api/planner/:id`) 및 스모크 검증 PASS(`plannerUpdateDelete=PASS`, 샘플 ID: `61168026-7c2c-4a87-a835-4bc49f39f125`)
+- 메모: 여행 제안 상태 관리 MVP 반영(`PATCH /api/suggestions/:id/status`, `received/reviewed`) 및 화면 관리 액션 추가([server/routes/suggestions.js](server/routes/suggestions.js), [client/src/pages/SuggestPage.jsx](client/src/pages/SuggestPage.jsx))
 
 ## 7) 상태 구조/클라이언트
 
