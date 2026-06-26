@@ -88,6 +88,9 @@ const main = async () => {
   const reviewedSuggestions = await requestJson(
     "/api/suggestions?status=reviewed",
   );
+  const oldestSuggestions = await requestJson(
+    "/api/suggestions?status=reviewed&sort=oldest",
+  );
 
   assertEqual(
     "planner.destination",
@@ -155,11 +158,30 @@ const main = async () => {
     );
   }
 
+  const reviewedDescTimestamps = reviewedSuggestions
+    .map((item) => new Date(item.createdAt).getTime())
+    .filter((value) => Number.isFinite(value));
+  const reviewedAscTimestamps = oldestSuggestions
+    .map((item) => new Date(item.createdAt).getTime())
+    .filter((value) => Number.isFinite(value));
+
+  const isDescSorted = reviewedDescTimestamps.every(
+    (value, index) => index === 0 || reviewedDescTimestamps[index - 1] >= value,
+  );
+  const isAscSorted = reviewedAscTimestamps.every(
+    (value, index) => index === 0 || reviewedAscTimestamps[index - 1] <= value,
+  );
+
+  if (!isDescSorted || !isAscSorted) {
+    throw new Error("suggestion sort failed: expected latest/oldest ordering");
+  }
+
   console.log("[smoke] plannerPostId=" + plannerPost.plan.id);
   console.log("[smoke] plannerUpdateDelete=PASS");
   console.log("[smoke] suggestionPostId=" + suggestionPost.suggestion.id);
   console.log("[smoke] suggestionStatusPatch=PASS");
   console.log("[smoke] suggestionStatusFilter=PASS");
+  console.log("[smoke] suggestionSort=PASS");
   console.log("[smoke] utf8-check=PASS");
 };
 

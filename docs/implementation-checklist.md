@@ -78,6 +78,7 @@
 - 메모: 플래너 수정/삭제 MVP 반영(`PUT /api/planner/:id`, `DELETE /api/planner/:id`) 및 스모크 검증 PASS(`plannerUpdateDelete=PASS`, 샘플 ID: `61168026-7c2c-4a87-a835-4bc49f39f125`)
 - 메모: 여행 제안 상태 관리 MVP 반영(`PATCH /api/suggestions/:id/status`, `received/reviewed`) 및 화면 관리 액션 추가([server/routes/suggestions.js](server/routes/suggestions.js), [client/src/pages/SuggestPage.jsx](client/src/pages/SuggestPage.jsx))
 - 메모: 여행 제안 상태 필터 MVP 반영(`GET /api/suggestions?status=received|reviewed`) 및 화면 필터 칩 추가, 스모크 검증 PASS(`suggestionStatusFilter=PASS`)
+- 메모: 여행 제안 정렬 MVP 반영(`GET /api/suggestions?sort=latest|oldest`) 및 화면 정렬 칩 추가, 스모크 검증 항목 추가(`suggestionSort=PASS`)
 
 ## 7) 상태 구조/클라이언트
 

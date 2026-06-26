@@ -7,9 +7,11 @@ const router = express.Router();
 const MAX_DESTINATION_LENGTH = 100;
 const MAX_SUGGESTION_LENGTH = 2000;
 const ALLOWED_SUGGESTION_STATUSES = new Set(["received", "reviewed"]);
+const ALLOWED_SUGGESTION_SORTS = new Set(["latest", "oldest"]);
 
 router.get("/", async (req, res) => {
   const rawStatus = String(req.query?.status ?? "").trim();
+  const rawSort = String(req.query?.sort ?? "latest").trim() || "latest";
 
   if (
     rawStatus &&
@@ -23,11 +25,19 @@ router.get("/", async (req, res) => {
     });
   }
 
+  if (!ALLOWED_SUGGESTION_SORTS.has(rawSort)) {
+    return sendError(res, {
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "sort는 latest 또는 oldest여야 합니다.",
+    });
+  }
+
   try {
     const rows = await prisma.travelSuggestion.findMany({
       where:
         rawStatus && rawStatus !== "all" ? { status: rawStatus } : undefined,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: rawSort === "oldest" ? "asc" : "desc" },
       take: 20,
       select: {
         id: true,
