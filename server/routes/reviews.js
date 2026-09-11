@@ -5,7 +5,7 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import db from "../db/index.js";
+import { prisma } from "../lib/prisma.js";
 import { verifyToken }  from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -46,21 +46,26 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
     const { bookingId, rating, comment } = req.body;
     const userId = req.user.id;
 
-    const [existing] = await db.query(
-      "SELECT 1 FROM reviews WHERE booking_id = ? AND user_id = ?",
-      [bookingId, userId]
-    );
-    if (existing.length) {
+    const existing = await prisma.review.findFirst({
+      where: { booking_id: bookingId, user_id: userId },
+      select: { id: true },
+    });
+    if (existing) {
       return res.status(400).json({ message: "이미 작성된 후기입니다." });
     }
 
     const imageUrl = req.file ? `/uploads/reviews/${req.file.filename}` : null;
 
-    await db.query(
-      `INSERT INTO reviews (id, user_id, booking_id, rating, comment, image_url, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [uuidv4(), userId, bookingId, rating, comment, imageUrl]
-    );
+    await prisma.review.create({
+      data: {
+        id: uuidv4(),
+        user_id: userId,
+        booking_id: bookingId,
+        rating: Number(rating),
+        comment,
+        image_url: imageUrl,
+      },
+    });
 
     res.status(201).json({ message: "후기가 등록되었습니다." });
   } catch (err) {
@@ -74,23 +79,29 @@ router.get("/reviewable", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const [rows] = await db.query(
-      `SELECT
-      b.id AS bookingId,
-      p.title,
-      b.booking_date,
-      r.id AS reviewId
-      FROM bookings b
-      JOIN packages p ON b.package_id = p.id
-      LEFT JOIN reviews r ON r.booking_id = b.id AND r.user_id = ?
-      WHERE b.user_id = ? AND b.status = 'completed'
-      ORDER BY b.booking_date DESC`,
-      [userId, userId]
-    );
+    const rows = await prisma.booking.findMany({
+      where: { user_id: userId, status: "completed" },
+      orderBy: { booking_date: "desc" },
+      select: {
+        id: true,
+        booking_date: true,
+        package: {
+          select: { title: true },
+        },
+        reviews: {
+          where: { user_id: userId },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
 
     const result = rows.map((row) => ({
-      ...row,
-      reviewed: !!row.reviewId,
+      bookingId: row.id,
+      title: row.package?.title,
+      booking_date: row.booking_date,
+      reviewId: row.reviews[0]?.id || null,
+      reviewed: !!row.reviews[0]?.id,
     }));
 
     res.json(result);
@@ -106,20 +117,20 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const [review] = await db.query(
-      "SELECT * FROM reviews WHERE id = ? AND user_id = ?",
-      [id, userId]
-    );
-    if (!review.length) {
+    const review = await prisma.review.findFirst({
+      where: { id, user_id: userId },
+      select: { id: true },
+    });
+    if (!review) {
       return res.status(404).json({ message: "후기를 찾을 수 없습니다." });
     }
 
-    await db.query(
-      `UPDATE reviews
-      SET is_deleted = true, updated_at = NOW()
-      WHERE id = ? AND user_id = ?`,
-      [id, userId]
-    );
+    await prisma.review.update({
+      where: { id },
+      data: {
+        is_deleted: true,
+      },
+    });
 
     res.json({ message: "후기가 삭제되었습니다." });
   } catch (err) {

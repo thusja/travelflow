@@ -1,14 +1,15 @@
-import db from "../db/index.js";
+import { prisma } from "../lib/prisma.js";
 import dayjs from "dayjs";
 
 export const getLoginLogs = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const [logs] = await db.query(
-      "SELECT id, ip, user_agent, created_at FROM login_logs WHERE user_id = ? ORDER BY created_at DESC",
-      [userId]
-    );
+    const logs = await prisma.loginLog.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: "desc" },
+      select: { id: true, ip: true, user_agent: true, created_at: true },
+    });
 
     res.json(logs);
   }
@@ -29,16 +30,22 @@ export const deleteMe = async (req, res) => {
 
   try {
     // 탈퇴 사유 로그 저장
-    await db.query(
-      "INSERT INTO withdrawal_logs (user_id, reason, created_at) VALUES (?, ? ,?)",
-      [userId, reason, dayjs().format("YYYY-MM-DD HH:mm:ss")]
-    );
+    await prisma.withdrawalLog.create({
+      data: {
+        user_id: userId,
+        reason,
+        created_at: dayjs().toDate(),
+      },
+    });
 
     // users table에서 탈퇴 처리 (소프트 삭제)
-    await db.query(
-      "UPDATE users SET is_deleted = 1, deleted_at = NOW(), updated_at = NOW() WHERE id = ?",
-      [userId]
-    );
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        is_deleted: true,
+        deleted_at: new Date(),
+      },
+    });
 
     return res.status(200).json({ message: "회원 탈퇴가 완료되었습니다."});
   }
@@ -55,10 +62,10 @@ export const updateNotifications = async (req, res) => {
   const { notifications } = req.body;
 
   try {
-    await db.query(
-      "UPDATE Users SET notifications = ? WHERE id = ?",
-      [JSON.stringify(notifications), userId]
-    );
+    await prisma.user.update({
+      where: { id: userId },
+      data: { notifications: JSON.stringify(notifications) },
+    });
     return res.json({ message: "알림 설정이 업데이트되었습니다." });
   }
   catch(err) {
@@ -71,20 +78,31 @@ export const getMe = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const [rows] = await db.query(
-      "SELECT id, firstname, lastname, nickname, email, phone, profileImage, notifications FROM users WHERE id = ? AND is_deleted = 0",
-      [userId]
-    );
+    const user = await prisma.user.findFirst({
+      where: { id: userId, is_deleted: false },
+      select: {
+        id: true,
+        firstname: true,
+        lastname: true,
+        nickname: true,
+        email: true,
+        phone: true,
+        profileImage: true,
+        notifications: true,
+      },
+    });
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(404).json({ message: "사용자 정보를 찾을 수 없습니다." });
     }
 
-    const user = rows[0];
-
     // notifications 파싱 처리
     try {
-      user.notifications = JSON.parse(user.notifications || "{}");
+      if (typeof user.notifications === "string") {
+        user.notifications = JSON.parse(user.notifications || "{}");
+      } else {
+        user.notifications = user.notifications || {};
+      }
     } catch (e) {
       user.notifications = {};
     }

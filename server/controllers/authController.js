@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
-import db from "../db/index.js";
+import { prisma } from "../lib/prisma.js";
 
 // 회원가입 - 순수 저장만
 export const signup = async (req, res) => {
@@ -10,8 +10,8 @@ export const signup = async (req, res) => {
 
   try {
     // 중복 이메일 검사
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-    if (rows.length > 0) {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
       return res.status(400).json({ message: "이미 사용 중인 이메일 입니다." });
     }
 
@@ -20,11 +20,18 @@ export const signup = async (req, res) => {
     const id = uuidv4();
 
     // db에 삽입
-    await db.query(
-      `INSERT INTO users (id, nickname, firstname, lastname, email, password, phone, profileImage, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, nickname, firstname, lastname, email, hashed, phone, defaultProfilePath]
-    );
+    await prisma.user.create({
+      data: {
+        id,
+        nickname,
+        firstname,
+        lastname,
+        email,
+        password: hashed,
+        phone,
+        profileImage: defaultProfilePath,
+      },
+    });
 
     return res.status(201).json({ message: "회원가입 성공", userId: id });
   } catch (err) {
@@ -38,13 +45,11 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const user = await prisma.user.findUnique({ where: { email } });
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ message: "아이디 또는 비밀번호가 일치하지 않습니다." });
     }
-
-    const user = rows[0];
 
     // 소프트 삭제된 계정 로그인 차단
     if(user.is_deleted) {
@@ -71,10 +76,13 @@ export const login = async (req, res) => {
     );
 
     // 로그인 로그 저장
-    await db.query(
-      "INSERT INTO login_logs (user_id, ip, user_agent) VALUES (?, ?, ?)",
-      [user.id, req.ip || req.connection.remoteAddress, req.headers['user-agent']]
-    );
+    await prisma.loginLog.create({
+      data: {
+        user_id: user.id,
+        ip: req.ip || req.connection.remoteAddress,
+        user_agent: req.headers["user-agent"],
+      },
+    });
 
     return res.status(200).json({
       message: "로그인 성공",
@@ -104,21 +112,22 @@ export const reactivateAccount = async (req, res) => {
   }
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-        if (rows.length === 0) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
       return res.status(404).json({ message: "존재하지 않는 이메일입니다." });
     }
-
-    const user = rows[0];
 
     if (!user.is_deleted) {
       return res.status(400).json({ message: "이미 활성화된 계정입니다." });
     }
 
-    await db.query(
-      "UPDATE users SET is_deleted = 0, deleted_at = NULL, updated_at = NOW() WHERE id = ?",
-      [user.id]
-    );
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        is_deleted: false,
+        deleted_at: null,
+      },
+    });
 
     return res.status(200).json({ message: "재가입이 완료되었습니다." });
   } 
