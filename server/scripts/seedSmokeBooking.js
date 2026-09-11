@@ -13,9 +13,6 @@ try {
     data: {
       id: crypto.randomUUID(),
       title: "Smoke Package",
-      description: "smoke",
-      price: 199.99,
-      imageUrl: null,
     },
   });
 
