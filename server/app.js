@@ -6,10 +6,13 @@ import { fileURLToPath } from "url";
 
 import packagesRouter from "./routes/packages.js";
 import authRoutes from "./routes/auth.js";
+import bookingsRouter from "./routes/bookings.js";
 import usersRouter from "./routes/users.js";
 import reviewsRouter from "./routes/reviews.js";
 import pointAndCouponRouter from "./routes/pointAndCoupon.js";
-import utilsRouter from"./routes/utils.js";
+import utilsRouter from "./routes/utils.js";
+import plannerRouter from "./routes/planner.js";
+import suggestionsRouter from "./routes/suggestions.js";
 
 dotenv.config();
 
@@ -29,10 +32,13 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // API 라우트
 app.use("/api/auth", authRoutes);
+app.use("/api/bookings", bookingsRouter);
 app.use("/api/packages", packagesRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/review", reviewsRouter);
 app.use("/api/points", pointAndCouponRouter);
+app.use("/api/planner", plannerRouter);
+app.use("/api/suggestions", suggestionsRouter);
 app.use("/api", utilsRouter);
 
 // 서버 시작

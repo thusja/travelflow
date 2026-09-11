@@ -3,111 +3,234 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
-  id             String          @id
-  nickname       String?
-  firstname      String?
-  lastname       String?
-  email          String          @unique
-  password       String
-  phone          String?
-  profileImage   String?
-  notifications  String?
-  is_deleted     Boolean         @default(false)
-  deleted_at     DateTime?
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @updatedAt
-  loginLogs      LoginLog[]
-  withdrawalLogs WithdrawalLog[]
-  reviews        Review[]
-  bookings       Booking[]
-  userCoupons    UserCoupon[]
+  id            String    @id @db.Uuid
+  nickname      String    @db.VarChar(50)
+  firstname     String    @db.VarChar(100)
+  lastname      String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(255)
+  password      String    @db.VarChar(255)
+  phone         String?   @db.VarChar(30)
+  profileImage  String?   @map("profileimage") @db.Text
+  notifications Json?
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  bookings            Booking[]
+  reviews             Review[]
+  loginLogs           LoginLog[]
+  idempotencyRequests IdempotencyRequest[]
+  pointHistories      PointHistory[]
+  refreshTokens       RefreshToken[]
+  withdrawalLogs      WithdrawalLog[]
+  userCoupons         UserCoupon[]
 
   @@map("users")
 }
 
-model LoginLog {
-  id         Int      @id @default(autoincrement())
-  user_id    String
-  ip         String?
-  user_agent String?
-  created_at DateTime @default(now())
-  user       User     @relation(fields: [user_id], references: [id])
-
-  @@map("login_logs")
-}
-
-model WithdrawalLog {
-  id         Int      @id @default(autoincrement())
-  user_id    String
-  reason     String
-  created_at DateTime @default(now())
-  user       User     @relation(fields: [user_id], references: [id])
-
-  @@map("withdrawal_logs")
-}
-
-model Review {
-  id         String    @id
-  user_id    String
-  booking_id String
-  rating     Int
-  comment    String?
-  image_url  String?
-  is_deleted Boolean   @default(false)
-  created_at DateTime  @default(now())
-  updated_at DateTime? @updatedAt
-  user       User      @relation(fields: [user_id], references: [id])
-  booking    Booking   @relation(fields: [booking_id], references: [id])
-
-  @@map("reviews")
-}
-
-model Booking {
-  id           String   @id
-  user_id      String
-  package_id   String
-  status       String
-  booking_date DateTime
-  user         User     @relation(fields: [user_id], references: [id])
-  package      Package  @relation(fields: [package_id], references: [id])
-  reviews      Review[]
-
-  @@map("bookings")
-}
-
 model Package {
-  id       String    @id
-  title    String
+  id          String   @id @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  price       Decimal? @db.Decimal(10, 2)
+  imageUrl    String?  @map("image_url") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
   bookings Booking[]
 
   @@map("packages")
 }
 
+model Booking {
+  id          String   @id @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  packageId   String   @map("package_id") @db.Uuid
+  bookingDate DateTime @map("booking_date") @db.Date
+  status      String   @default("pending") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pkg     Package  @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  reviews Review[]
+
+  @@index([userId])
+  @@index([packageId])
+  @@map("bookings")
+}
+
+model Review {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  bookingId String    @map("booking_id") @db.Uuid
+  rating    Int
+  comment   String?   @db.Text
+  imageUrl  String?   @map("image_url") @db.Text
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, userId])
+  @@index([userId])
+  @@map("reviews")
+}
+
 model Coupon {
-  id         Int          @id
-  code       String       @unique
-  name       String
-  expire_at  DateTime
+  id        String   @id @db.Uuid
+  name      String   @db.VarChar(255)
+  code      String   @unique @db.VarChar(100)
+  expireAt  DateTime @map("expire_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
   userCoupons UserCoupon[]
 
   @@map("coupons")
 }
 
 model UserCoupon {
-  id         String   @id
-  user_id    String
-  coupon_id  Int
-  status     String
-  assigned_at DateTime @default(now())
-  user       User     @relation(fields: [user_id], references: [id])
-  coupon     Coupon   @relation(fields: [coupon_id], references: [id])
+  id         String    @id @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  couponId   String    @map("coupon_id") @db.Uuid
+  status     String    @default("사용 가능") @db.VarChar(50)
+  assignedAt DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  usedAt     DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([user_id, coupon_id])
-  @@map("usercoupons")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+  @@index([couponId])
+  @@map("user_coupons")
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id") @db.Uuid
+  ip        String?  @db.VarChar(100)
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("login_logs")
+}
+
+model WithdrawalLog {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id") @db.Uuid
+  reason    String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("withdrawal_logs")
+}
+
+model PointHistory {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id") @db.Uuid
+  description String   @db.VarChar(255)
+  amount      Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("point_histories")
+}
+
+model IdempotencyRequest {
+  id             String   @id @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(255)
+  method         String   @db.VarChar(10)
+  path           String   @db.VarChar(255)
+  requestHash    String   @map("request_hash") @db.VarChar(128)
+  state          String   @default("pending") @db.VarChar(20)
+  statusCode     Int?     @map("status_code")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey, method, path])
+  @@index([createdAt])
+  @@map("idempotency_requests")
+}
+
+model RefreshToken {
+  id                String    @id @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  tokenHash         String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  replacedByTokenId String?   @map("replaced_by_token_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedByToken RefreshToken? @relation("RefreshTokenChain", fields: [replacedByTokenId], references: [id], onDelete: SetNull)
+  replacedTokens  RefreshToken[] @relation("RefreshTokenChain")
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model JobRun {
+  id         String    @id @db.Uuid
+  jobName    String    @map("job_name") @db.VarChar(100)
+  status     String    @db.VarChar(30)
+  attempt    Int       @default(1)
+  payload    Json?
+  error      String?   @db.Text
+  startedAt  DateTime  @map("started_at") @db.Timestamptz(6)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([jobName, createdAt])
+  @@index([status])
+  @@map("job_runs")
+}
+
+model TripPlan {
+  id          String   @id @db.Uuid
+  destination String   @db.VarChar(255)
+  travelDate  DateTime @map("travel_date") @db.Date
+  memo        String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([travelDate])
+  @@index([createdAt])
+  @@map("trip_plans")
+}
+
+model TravelSuggestion {
+  id          String   @id @db.Uuid
+  destination String   @db.VarChar(255)
+  content     String   @db.Text
+  status      String   @default("received") @db.VarChar(30)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("travel_suggestions")
 }

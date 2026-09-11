@@ -1,44 +1,16 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getAccessToken } from "@/utils/authStorage.js";
+import LoadingState from "@/components/Common/LoadingState.jsx";
+import EmptyState from "@/components/Common/EmptyState.jsx";
+import ErrorState from "@/components/Common/ErrorState.jsx";
+import { queryKeys } from "@/utils/queryKeys.js";
 
-// 더미 취소/환불 내역
-const dummyCancelled = [
-  {
-    id: "BK202405002",
-    title: "제주도 렌터카 포함 숙박 패키지",
-    date: "2025-07-01 ~ 2025-07-04",
-    status: "취소 완료",
-    price: 420000,
-  },
-  {
-    id: "BK202405004",
-    title: "강릉 힐링 숙소 3박",
-    date: "2025-08-03 ~ 2025-08-06",
-    status: "환불 진행중",
-    price: 610000,
-  },
-  {
-    id: "BK202404009",
-    title: "경주 역사 유적 탐방",
-    date: "2025-05-10 ~ 2025-05-11",
-    status: "취소 완료",
-    price: 310000,
-  },
-  {
-    id: "BK202403003",
-    title: "속초 해수욕과 회 정식 패키지",
-    date: "2025-06-01 ~ 2025-06-02",
-    status: "환불 완료",
-    price: 290000,
-  },
-  {
-    id: "BK202403017",
-    title: "여수 밤바다 요트 투어",
-    date: "2025-07-18 ~ 2025-07-20",
-    status: "환불 진행중",
-    price: 440000,
-  },
-];
+const formatDate = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("ko-KR");
+};
 
 const statusColor = {
   "취소 완료": "text-gray-500",
@@ -48,15 +20,44 @@ const statusColor = {
 
 const itemsPerPage = 4;
 
+const fetchCancelledBookings = async () => {
+  const token = getAccessToken();
+  if (!token) return [];
+
+  const res = await fetch("http://localhost:5000/api/bookings?status=cancelled", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "취소 목록 조회 실패");
+  }
+
+  return data.map((item) => ({
+    id: item.id,
+    title: item.package?.title || "패키지 정보 없음",
+    date: formatDate(item.booking_date),
+    rawDate: item.booking_date,
+    status: "취소 완료",
+    price: Number(item.package?.price || 0),
+  }));
+};
+
 const Cancel = () => {
-  const [records, setRecords] = useState([]);
   const [statusFilter, setStatusFilter] = useState("전체");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
-
-  useEffect(() => {
-    setRecords(dummyCancelled);
-  }, []);
+  const {
+    data: records = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.bookings.list({ status: "cancelled" }),
+    queryFn: fetchCancelledBookings,
+  });
 
   const handleFilterChange = (status) => {
     setStatusFilter(status);
@@ -67,14 +68,15 @@ const Cancel = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
-  const filtered = records.filter(
-    (r) => statusFilter === "전체" || r.status === statusFilter
+  const filtered = useMemo(
+    () => records.filter((r) => statusFilter === "전체" || r.status === statusFilter),
+    [records, statusFilter],
   );
 
   // 날짜 정렬 함수
   const sorted = [...filtered].sort((a, b) => {
-    const dateA = new Date(a.date.split("~")[0].trim());
-    const dateB = new Date(b.date.split("~")[0].trim());
+    const dateA = new Date(a.rawDate || a.date);
+    const dateB = new Date(b.rawDate || b.date);
     return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
   });
 
@@ -90,9 +92,17 @@ const Cancel = () => {
         취소 / 환불 내역
       </h2>
 
+      {isLoading && <LoadingState message="불러오는 중..." />}
+      {!isLoading && isError && (
+        <ErrorState message={error?.message || "취소/환불 내역을 불러오지 못했습니다."} />
+      )}
+      {!isLoading && !isError && sorted.length === 0 && (
+        <EmptyState message="취소/환불 내역이 없습니다." />
+      )}
+
       {/* 필터 */}
       <div className="flex flex-wrap justify-center gap-2 mb-6">
-        {["전체", "취소 완료", "환불 진행중", "환불 완료"].map((status) => (
+        {["전체", "취소 완료"].map((status) => (
           <button
             key={status}
             onClick={() => handleFilterChange(status)}

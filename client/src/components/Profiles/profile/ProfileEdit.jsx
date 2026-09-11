@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import ProfileImageEditor from "@/components/Profiles/profile/ProfileImageEditor";
 import defaultProfile from "@/assets/images/default-profile.png";
 import { FiLoader } from "react-icons/fi";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const ProfileEdit = () => {
   const { user, login } = useAuth();
@@ -38,7 +39,7 @@ const ProfileEdit = () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       const res = await fetch("http://localhost:5000/api/users/profile", {
         method: "PUT",
         headers: {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const Points = () => {
   const [point, setPoint] = useState(0);
@@ -21,7 +22,7 @@ const Points = () => {
   }, []);
 
   const fetchPointData = async () => {
-    const token = localStorage.getItem("token");
+    const token = getAccessToken();
     if (!token) {
       alert("로그인이 필요합니다.");
       return;
@@ -83,7 +84,7 @@ const Points = () => {
 
     try {
       setRegistering(true);
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
 
       const res = await fetch("http://localhost:5000/api/points/register", {
         method: "POST",

@@ -1,7 +1,8 @@
 import { Navigate } from "react-router-dom";
+import { getStoredUser } from "@/utils/authStorage.js";
 
 const PrivateRoute = ({ children }) => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = getStoredUser();
 
   if(!user) {
     return <Navigate to="/login" replace />;

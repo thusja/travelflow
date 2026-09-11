@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getAccessToken } from "@/utils/authStorage.js";
 
 const Logs = () => {
   const [logs, setLogs] = useState([]);
@@ -12,7 +13,7 @@ const Logs = () => {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
 
       try {
         const res = await fetch("http://localhost:5000/api/users/logs", {

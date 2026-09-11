@@ -5,8 +5,15 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { prisma } from "../lib/prisma.js";
-import { verifyToken }  from "../middlewares/auth.js";
+import prisma from "../db/index.js";
+import { verifyToken } from "../middlewares/auth.js";
+import { ERROR_CODES, sendError } from "../utils/apiResponse.js";
+import {
+  createListMeta,
+  hasListQuery,
+  parsePageSize,
+  parseSort,
+} from "../utils/listQuery.js";
 
 const router = express.Router();
 
@@ -15,7 +22,7 @@ const __dirname = dirname(__filename);
 
 // 자동 폴더 생성
 const uploadDir = path.join(__dirname, "../uploads/reviews");
-if(!fs.existsSync(uploadDir)) {
+if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
@@ -27,13 +34,13 @@ const storage = multer.diskStorage({
     cb(null, uuidv4() + ext);
   },
 });
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp/;
     const ext = path.extname(file.originalname).toLowerCase();
-    if(!allowed.test(ext)) {
+    if (!allowed.test(ext)) {
       return cb(new Error("지원하지 않는 이미지 형식입니다."), false);
     }
     cb(null, true);
@@ -47,11 +54,15 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
     const userId = req.user.id;
 
     const existing = await prisma.review.findFirst({
-      where: { booking_id: bookingId, user_id: userId },
+      where: { bookingId, userId },
       select: { id: true },
     });
     if (existing) {
-      return res.status(400).json({ message: "이미 작성된 후기입니다." });
+      return sendError(res, {
+        status: 400,
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message: "이미 작성된 후기입니다.",
+      });
     }
 
     const imageUrl = req.file ? `/uploads/reviews/${req.file.filename}` : null;
@@ -59,18 +70,22 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
     await prisma.review.create({
       data: {
         id: uuidv4(),
-        user_id: userId,
-        booking_id: bookingId,
+        userId,
+        bookingId,
         rating: Number(rating),
         comment,
-        image_url: imageUrl,
+        imageUrl,
       },
     });
 
     res.status(201).json({ message: "후기가 등록되었습니다." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "후기 등록 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "후기 등록 실패",
+    });
   }
 });
 
@@ -78,18 +93,53 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
 router.get("/reviewable", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const { filter = "", sort } = req.query;
+    const { page, size, skip, take } = parsePageSize(req.query);
+
+    const sortInfo = parseSort(sort, ["bookingDate", "title"], {
+      key: "bookingDate",
+      direction: "desc",
+    });
+
+    const orderBy =
+      sortInfo.key === "title"
+        ? { pkg: { title: sortInfo.direction } }
+        : { bookingDate: sortInfo.direction };
+
+    const where = {
+      userId,
+      status: "completed",
+      ...(filter && typeof filter === "string"
+        ? {
+            pkg: {
+              title: {
+                contains: filter,
+                mode: "insensitive",
+              },
+            },
+          }
+        : {}),
+    };
+
+    const total = await prisma.booking.count({ where });
 
     const rows = await prisma.booking.findMany({
-      where: { user_id: userId, status: "completed" },
-      orderBy: { booking_date: "desc" },
+      where,
+      orderBy,
+      skip,
+      take,
       select: {
         id: true,
-        booking_date: true,
-        package: {
-          select: { title: true },
+        bookingDate: true,
+        pkg: {
+          select: {
+            title: true,
+          },
         },
         reviews: {
-          where: { user_id: userId },
+          where: {
+            userId,
+          },
           select: { id: true },
           take: 1,
         },
@@ -98,16 +148,27 @@ router.get("/reviewable", verifyToken, async (req, res) => {
 
     const result = rows.map((row) => ({
       bookingId: row.id,
-      title: row.package?.title,
-      booking_date: row.booking_date,
-      reviewId: row.reviews[0]?.id || null,
+      title: row.pkg.title,
+      booking_date: row.bookingDate,
+      reviewId: row.reviews[0]?.id ?? null,
       reviewed: !!row.reviews[0]?.id,
     }));
+
+    if (hasListQuery(req.query)) {
+      return res.json({
+        items: result,
+        meta: createListMeta({ page, size, total }),
+      });
+    }
 
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "예약 목록 조회 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "예약 목록 조회 실패",
+    });
   }
 });
 
@@ -118,24 +179,36 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const userId = req.user.id;
 
     const review = await prisma.review.findFirst({
-      where: { id, user_id: userId },
+      where: {
+        id,
+        userId,
+      },
       select: { id: true },
     });
     if (!review) {
-      return res.status(404).json({ message: "후기를 찾을 수 없습니다." });
+      return sendError(res, {
+        status: 404,
+        code: ERROR_CODES.RESOURCE_NOT_FOUND,
+        message: "후기를 찾을 수 없습니다.",
+      });
     }
 
     await prisma.review.update({
       where: { id },
       data: {
-        is_deleted: true,
+        isDeleted: true,
+        updatedAt: new Date(),
       },
     });
 
     res.json({ message: "후기가 삭제되었습니다." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "후기 삭제 실패" });
+    return sendError(res, {
+      status: 500,
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message: "후기 삭제 실패",
+    });
   }
 });
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { clearAuthStorage, getAccessToken } from "@/utils/authStorage.js";
 
 const Withdraw = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Withdraw = () => {
     if (!confirmed) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
 
       const res = await fetch("http://localhost:5000/api/users/me", {
         method: "DELETE",
@@ -45,7 +46,7 @@ const Withdraw = () => {
       if (!res.ok) throw new Error("탈퇴 요청 실패");
 
       alert("회원탈퇴가 완료되었습니다.");
-      localStorage.removeItem("token");
+      clearAuthStorage();
       navigate("/login");
     } catch (err) {
       console.error("탈퇴 오류:", err);
