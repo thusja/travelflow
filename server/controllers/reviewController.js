@@ -1,4 +1,4 @@
-import { sendError } from "../utils/apiResponse.js";
+import { withErrorHandling } from "../utils/controllerHandler.js";
 import {
   createListMeta,
   hasListQuery,
@@ -10,64 +10,48 @@ import {
   deleteReview,
   getReviewableBookings,
 } from "../services/reviewService.js";
-import { toErrorPayload } from "../services/serviceError.js";
 
-export const createReviewHandler = async (req, res) => {
-  try {
-    const { bookingId, rating, comment } = req.body;
-    const userId = req.user.id;
-    const imageUrl = req.file ? `/uploads/reviews/${req.file.filename}` : null;
+export const createReviewHandler = withErrorHandling(async (req, res) => {
+  const { bookingId, rating, comment } = req.body;
+  const userId = req.user.id;
+  const imageUrl = req.file ? `/uploads/reviews/${req.file.filename}` : null;
 
-    await createReview({ userId, bookingId, rating, comment, imageUrl });
-    return res.status(201).json({ message: "후기가 등록되었습니다." });
-  } catch (err) {
-    console.error(err);
-    return sendError(res, toErrorPayload(err));
-  }
-};
+  await createReview({ userId, bookingId, rating, comment, imageUrl });
+  return res.status(201).json({ message: "후기가 등록되었습니다." });
+}, "후기 등록 오류:");
 
-export const getReviewableHandler = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { filter = "", sort } = req.query;
-    const { page, size, skip, take } = parsePageSize(req.query);
+export const getReviewableHandler = withErrorHandling(async (req, res) => {
+  const userId = req.user.id;
+  const { filter = "", sort } = req.query;
+  const { page, size, skip, take } = parsePageSize(req.query);
 
-    const sortInfo = parseSort(sort, ["bookingDate", "title"], {
-      key: "bookingDate",
-      direction: "desc",
+  const sortInfo = parseSort(sort, ["bookingDate", "title"], {
+    key: "bookingDate",
+    direction: "desc",
+  });
+
+  const { total, items } = await getReviewableBookings({
+    userId,
+    filter,
+    sortInfo,
+    skip,
+    take,
+  });
+
+  if (hasListQuery(req.query)) {
+    return res.json({
+      items,
+      meta: createListMeta({ page, size, total }),
     });
-
-    const { total, items } = await getReviewableBookings({
-      userId,
-      filter,
-      sortInfo,
-      skip,
-      take,
-    });
-
-    if (hasListQuery(req.query)) {
-      return res.json({
-        items,
-        meta: createListMeta({ page, size, total }),
-      });
-    }
-
-    return res.json(items);
-  } catch (err) {
-    console.error(err);
-    return sendError(res, toErrorPayload(err));
   }
-};
 
-export const deleteReviewHandler = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
+  return res.json(items);
+}, "리뷰 가능 예약 조회 오류:");
 
-    await deleteReview({ id, userId });
-    return res.json({ message: "후기가 삭제되었습니다." });
-  } catch (err) {
-    console.error(err);
-    return sendError(res, toErrorPayload(err));
-  }
-};
+export const deleteReviewHandler = withErrorHandling(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  await deleteReview({ id, userId });
+  return res.json({ message: "후기가 삭제되었습니다." });
+}, "후기 삭제 오류:");
