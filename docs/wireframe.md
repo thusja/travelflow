@@ -74,11 +74,11 @@ flowchart TD
 
 ## 3) 구현 상태 진단 (작성 중/더미 포함)
 
-- 예약(`booking`)은 UI만 존재, 저장/조회 API 미연결
+- 예약(`booking`)은 `/api/bookings` 및 `/api/bookings/catalog` 연동됨
 - 플래너(`planner`)는 `/api/planner` 연동으로 저장/최근 목록 조회 가능
 - 제안(`suggest`)은 `/api/suggestions` 연동으로 제출/최근 목록 조회 가능
 - 나의 예약(`history`, `detail`, `review`, `cancel`) 다수가 더미 데이터 기반
-- 포인트/쿠폰은 서버 라우트가 존재하지만 더미 포인트/쿠폰 혼합
+- 포인트/쿠폰은 서버 라우트와 Prisma 실데이터 조회/등록이 동작하며 UX 정교화가 남음
 
 ## 4) To-Be 와이어프레임 권장
 

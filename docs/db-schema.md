@@ -1,8 +1,8 @@
 # TravelFlow DB Schema
 
-## 1) 현재 사용 흔적 기반 테이블 (As-Is, MySQL 추정)
+## 1) 마이그레이션 이전 기록 (참고용)
 
-코드 쿼리 기준으로 확인된 테이블/컬럼 추정:
+초기 마이그레이션 시점에 정리한 MySQL 기반 추정 기록이며, 현재 운영 스키마의 단일 기준은 server/prisma/schema.prisma 와 Supabase PostgreSQL이다.
 
 - `users`
   - `id (uuid/string)`
@@ -43,7 +43,7 @@
 - `packages`
   - `id`
   - `title`
-  - (현재는 실제로 `packages.json` 사용 중)
+  - (현재는 Prisma를 통해 `packages` 테이블 조회)
 
 - `Coupons`
   - `id, code, name, expire_at`
@@ -51,7 +51,7 @@
 - `UserCoupons`
   - `id, user_id, coupon_id, status, assigned_at`
 
-## 2) Supabase(PostgreSQL) 전환 설계 (To-Be)
+## 2) 현재 운영 기준 (Supabase PostgreSQL + Prisma)
 
 ### 2.0 ORM 정책 (Prisma)
 
@@ -65,7 +65,7 @@
 - 타임스탬프: `created_at`, `updated_at`
 - 소프트 삭제: `deleted_at` (nullable)
 
-### 2.1.1 Prisma 모델 매핑표 (To-Be)
+### 2.1.1 Prisma 모델 매핑표
 
 | Prisma model    | DB table                 | 비고               |
 | --------------- | ------------------------ | ------------------ |

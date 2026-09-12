@@ -92,7 +92,7 @@ sequenceDiagram
 - 동일 로그인 요청이 중복 수행되는 흐름 존재(폼/페이지 양쪽)
 - 더미 데이터와 실데이터가 혼재하여 책임 경계가 모호함
 - 라우팅 중첩 구조가 복잡하여 유지보수 난이도 상승
-- API 경로/필드 불일치가 일부 존재
+- API 경로/필드 주요 불일치는 1차 정리 완료, 문서 동기화 자동화가 다음 과제
 
 ## 4) 권장 워크플로우 (To-Be)
 
@@ -180,8 +180,5 @@ flowchart TD
 
 ## 5) 추천 단계별 로드맵
 
-- Phase 1: API 계약 정리 + 더미 제거 계획 수립
-- Phase 2: 예약/후기/포인트 실데이터 연결
-- Phase 3: Supabase + Prisma 전환
-- Phase 4: Access/Refresh 인증 + Redis 캐시 + 스케줄러 도입
-- Phase 5: 모니터링/로그/권한 정책(RLS) 강화
+- 현재 최신 로드맵은 expansion-roadmap.md를 기준으로 관리한다.
+- 기존 Phase 정의는 마이그레이션 당시 기록이며, 실행 순서는 expansion-roadmap.md의 Phase A~D를 따른다.

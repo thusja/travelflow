@@ -35,8 +35,8 @@
 
 - `PackagePage`: `packages, selected, loading`
 - `BookingLayout`: `checkIn/checkOut/adults/children/error/success`
-- `PlannerPage`: 입력 폼 state만 존재(저장 미연결)
-- `SuggestPage`: 입력/성공 메시지 로컬 처리
+- `PlannerPage`: 입력 폼 state + `/api/planner` 저장/조회 연동
+- `SuggestPage`: 입력/필터 state + `/api/suggestions` 제출/조회 연동
 - `Points`: 포인트/쿠폰 목록 + 필터 + 페이징 + 모달 state
 - `Logs`: 기간 필터 + 페이징 state
 
@@ -46,6 +46,7 @@
 - API 에러/로딩 처리 방식이 화면별로 달라 일관성 부족
 - 인증 상태를 Context + localStorage에서 수동 동기화
 - 더미 데이터/실데이터가 혼재되어 상태 책임이 불명확
+- TanStack Query는 도입 시작 단계이며 전 화면 확산 전환이 필요
 
 ## 2) 목표 상태 구조 (To-Be)
 
