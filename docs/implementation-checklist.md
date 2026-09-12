@@ -70,9 +70,13 @@
 - [x] 로그인 중복 호출 제거(호출 계층 단일화)
 - [x] 목록 API에 page/size/sort/filter 규약 적용
 - [x] 멱등성 키 적용 대상 API 구현(예약 생성/취소/쿠폰 등록)
+- [x] MVC2 패턴 확장 적용(bookings/planner/suggestions/packages)
+- [x] 컨트롤러 공통 async 에러 래퍼 적용
 - 메모: 로그인 API 호출은 [client/src/components/Login/LoginForm.jsx](client/src/components/Login/LoginForm.jsx#L37) 한 곳에서만 수행됨
 - 메모: packages, review/reviewable, users/logs 엔드포인트에 page/size/sort/filter 적용 (기존 응답 포맷 호환 유지)
 - 메모: 쿠폰 등록([server/routes/pointAndCoupon.js](server/routes/pointAndCoupon.js)), 예약 생성/취소([server/routes/bookings.js](server/routes/bookings.js))에 Idempotency-Key + DB 저장(idempotency_requests) 적용 완료
+- 메모: bookings/planner/suggestions/packages 라우트 비즈니스 로직을 services로 이동하고 routes는 thin wiring으로 정리([server/routes/bookings.js](server/routes/bookings.js), [server/routes/planner.js](server/routes/planner.js), [server/routes/suggestions.js](server/routes/suggestions.js), [server/routes/packages.js](server/routes/packages.js))
+- 메모: 컨트롤러 예외 처리를 공통 래퍼로 통일([server/utils/controllerHandler.js](server/utils/controllerHandler.js))
 - 메모: wireframe/workflow 미완 MVP였던 플래너/여행 제안을 API+DB로 연결 완료([server/routes/planner.js](server/routes/planner.js), [server/routes/suggestions.js](server/routes/suggestions.js), [client/src/pages/PlannerPage.jsx](client/src/pages/PlannerPage.jsx), [client/src/pages/SuggestPage.jsx](client/src/pages/SuggestPage.jsx))
 - 메모: 스모크 테스트 완료(`POST/GET /api/planner`, `POST/GET /api/suggestions`) - 생성된 샘플 ID 확인(`9ceb0189-d9c1-4561-902b-fc986d7f687f`, `c6848216-56dc-4be2-99a4-53b8a0660d75`)
 - 메모: UTF-8 스모크 스크립트 추가([server/scripts/smokePlannerSuggestApi.js](server/scripts/smokePlannerSuggestApi.js), `npm run smoke:planner-suggestions`) 및 한글 payload 저장/조회 검증 PASS (샘플 ID: `38054d60-bd68-436d-8201-37fa9e6b7e9c`, `462578a0-da4a-4556-ac45-4e7bc8ac9e85`)
@@ -95,6 +99,7 @@
 ## 8) 테스트/배포 게이트 - 보류
 
 - 메모: 현재 단계에서는 테스트/배포 게이트를 보류하고, 기능 범위 확정 후 재개한다.
+- 메모: 반복 회귀 점검용 스모크 스크립트 유지 - `npm --prefix server run smoke:planner-suggestions`, `npm --prefix server run smoke:booking-packages`(후자는 `SMOKE_ACCESS_TOKEN` 필요)
 <!--
 - [ ] 인증 시나리오 테스트(로그인, 재발급, 만료, 로그아웃)
 - [ ] 예약/후기/쿠폰 핵심 E2E 테스트 통과

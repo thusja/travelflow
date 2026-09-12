@@ -10,6 +10,7 @@
 - `api-integration.md`: API 호출 규칙, Query key, 무효화, 에러 UX
 - `page-spec.md`: 라우트별 목적, 주요 상태, API 의존성
 - `implementation-checklist.md`: 프론트 구현/검증 체크리스트
+- `scan-report-2026-09-13.md`: 현재 프론트 코드 스캔 결과와 우선 수정 항목
 
 ## 추천 사용 순서
 

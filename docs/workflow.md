@@ -110,7 +110,8 @@ sequenceDiagram
 2. DB 변경 -> `db-schema.md` + SQL migration 반영
 3. 서버 구현 -> API contract test 통과
 4. 프론트 연결 -> Query key/Mutation 규칙 적용
-5. 배포 전 -> 시나리오 E2E(로그인, 예약, 후기, 쿠폰)
+5. 수동 회귀 점검 -> smoke 스크립트 실행(planner/suggestions, booking/packages)
+6. 배포 전 -> 시나리오 E2E(로그인, 예약, 후기, 쿠폰)
 
 ### Supabase 운영 워크플로우
 
