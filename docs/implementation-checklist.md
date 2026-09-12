@@ -5,10 +5,10 @@
 
 ## 1) 공통 준비
 
-- [x] 환경변수 키 목록 확정 (`.env.example` 갱신)
-- 메모: [server/.env.example](server/.env.example) 기준 `PORT`, `NODE_ENV`, `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `EXCHANGE_API_KEY`, `WEATHER_API_KEY`, `VITE_WEATHER_API_KEY`, `SMOKE_USER_ID` 정리
+- [x] 환경변수 키 목록 확정
+- 메모: `PORT`, `NODE_ENV`, `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `EXCHANGE_API_KEY`, `WEATHER_API_KEY`, `VITE_WEATHER_API_KEY`, `SMOKE_USER_ID` 키 사용
 - [x] 개발/스테이징/운영 환경 분리 전략 확정
-- 메모: [docs/environment-strategy.md](docs/environment-strategy.md) 작성 및 [server/.env.development.example](server/.env.development.example), [server/.env.staging.example](server/.env.staging.example), [server/.env.production.example](server/.env.production.example) 템플릿 추가
+- 메모: [docs/environment-strategy.md](docs/environment-strategy.md) 기준으로 운영 시 Secret Manager 주입 전략 사용
 - [x] 기존 더미 데이터 제거 대상 목록 작성
 - 메모: 더미 전환 추적 문서 [docs/dummy-removal-targets.md](docs/dummy-removal-targets.md) 작성
 - 메모: 데이터 저장 원칙 고정 - 도메인 데이터는 Supabase(PostgreSQL) 단일 저장소를 사용하고 localStorage는 UI 보조 상태에만 사용([docs/state-structure.md](docs/state-structure.md), [docs/workflow.md](docs/workflow.md))
@@ -34,7 +34,7 @@
 - [x] RefreshToken 만료 시간 설정(권장 7~30일)
 - [x] RefreshToken 해시 저장 및 회전(rotation) 로직 구현
 - [x] 로그인/재발급/로그아웃/전체로그아웃 API 구현
-- 메모: access 15m, refresh 14d 기본값 적용([server/.env.example](server/.env.example))
+- 메모: access 15m, refresh 14d 기본값 적용(`JWT_EXPIRES_IN`, `REFRESH_EXPIRES_IN`)
 - 메모: refresh token은 SHA-256 해시로 DB 저장 + 재발급 시 회전/이전 토큰 폐기([server/controllers/authController.js](server/controllers/authController.js), [server/prisma/schema.prisma](server/prisma/schema.prisma))
 - 메모: 신규 API [server/routes/auth.js](server/routes/auth.js) 기준 `POST /api/auth/refresh`, `POST /api/auth/logout`, `POST /api/auth/logout-all` 추가
 - [x] 클라이언트 refresh 단일 큐 처리(동시 401 방지)

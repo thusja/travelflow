@@ -31,5 +31,5 @@
 
 ## 현재 상태
 
-- 현재 클라이언트는 TanStack Query 미도입 상태이며 fetch + 로컬 상태를 사용한다.
-- 본 문서를 기준으로 도입 시 queryKey/invalidateQueries를 동일 규칙으로 적용한다.
+- TanStack Query 도입이 시작되었고 주요 조회 화면에 적용되어 있다.
+- 남은 화면도 본 문서를 기준으로 queryKey/invalidateQueries 규칙을 동일하게 확장 적용한다.

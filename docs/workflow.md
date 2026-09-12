@@ -7,7 +7,7 @@
 - Frontend: React 19, Vite 6, React Router 7, Tailwind CSS 4
 - Backend: Node.js, Express 5
 - Auth: JWT + localStorage
-- DB: MySQL(`mysql2`), 파일 업로드는 로컬 `uploads/`
+- DB: Supabase PostgreSQL + Prisma, 파일 업로드는 현재 로컬 `uploads/` (Storage 전환 예정)
 - External API: OpenWeather, ExchangeRate API, RestCountries
 
 ### 목표(To-Be, Supabase)
@@ -38,7 +38,7 @@ sequenceDiagram
   participant U as User
   participant C as Client
   participant S as Server
-  participant DB as MySQL
+  participant DB as PostgreSQL
 
   U->>C: 회원가입 입력
   C->>S: POST /api/auth/signup
@@ -70,13 +70,13 @@ sequenceDiagram
 
 - 조회: `GET /api/points`
 - 등록: `POST /api/points/register`
-- 현재는 DB + 더미 데이터가 혼합되어 반환됨
+- 현재는 Prisma 기반 실데이터로 반환됨
 
 ### 후기 작성
 
 - 작성: `POST /api/review`
 - 서버는 `bookingId, rating, comment, image`를 기대
-- 프론트는 `content` 필드를 전송(불일치)
+- 프론트/서버 필드명(`comment`) 정합성 반영 완료
 
 ### 플래너/여행 제안 (MVP 보완)
 
@@ -112,15 +112,15 @@ sequenceDiagram
 4. 프론트 연결 -> Query key/Mutation 규칙 적용
 5. 배포 전 -> 시나리오 E2E(로그인, 예약, 후기, 쿠폰)
 
-### Supabase 전환 워크플로우
+### Supabase 운영 워크플로우
 
-1. MySQL 스키마를 PostgreSQL snake_case로 정리
-2. Supabase 프로젝트 생성 + SQL 적용
-3. Prisma 초기화(`schema.prisma`, `migrate`, `generate`) 및 모델 반영
-4. 이미지 업로드를 Supabase Storage 버킷으로 변경
-5. JWT를 Access/Refresh 구조로 분리하고 Refresh 저장소(테이블+Redis) 구성
-6. 스케줄러 워커(BullMQ) 구성 및 주기 작업 등록
-7. 기존 Express API는 BFF 역할로 축소
+1. Prisma 스키마/마이그레이션을 단일 기준으로 유지
+2. Supabase SQL(RLS/Storage 정책)은 별도 SQL migration으로 누적
+3. 이미지 업로드를 Supabase Storage 버킷으로 단계 전환
+4. Access/Refresh 인증 운영(회전/폐기/세션 정책)
+5. Redis 캐시/무효화 규칙 안정화
+6. 스케줄러 워커(BullMQ) 재도입 시점 결정 후 배치 작업 확장
+7. Express API는 BFF 역할을 유지하며 필요한 기능만 Edge Functions로 분리
 
 ### Access/Refresh 토큰 생명주기 (To-Be)
 

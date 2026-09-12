@@ -10,12 +10,10 @@
 
 ## 2. 변수 관리 원칙
 
-- 공통 키 스키마는 [server/.env.example](server/.env.example) 기준으로 고정한다.
+- 공통 키 스키마는 팀 문서(본 문서 + 체크리스트) 기준으로 고정한다.
 - 실제 비밀값은 git에 커밋하지 않는다.
-- 환경별 값은 아래 템플릿으로 관리한다.
-  - [server/.env.development.example](server/.env.development.example)
-  - [server/.env.staging.example](server/.env.staging.example)
-  - [server/.env.production.example](server/.env.production.example)
+- 현재는 단일 [server/.env](server/.env) 로컬 파일을 사용한다.
+- 운영 시에는 배포 환경 변수(Secret Manager)로 주입하고 템플릿 파일은 저장소에 두지 않는다.
 
 ## 3. 우선순위 및 런타임 규칙
 
