@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -18,6 +18,7 @@ import {
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
+import { useConfirm } from "@/components/Common/ConfirmProvider.jsx";
 import useSyncedDebouncedQueryValue from "@/hooks/useSyncedDebouncedQueryValue.js";
 
 const ALLOWED_FILTERS = new Set(['all', 'received', 'reviewed']);
@@ -39,6 +40,7 @@ const SuggestPage = () => {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [visibleCount, setVisibleCount] = useState(SUGGESTIONS_PAGE_SIZE);
   const deleteCommitTimerRef = useRef(null);
+  const confirm = useConfirm();
 
   const queryClient = useQueryClient();
   const {
@@ -55,12 +57,30 @@ const SuggestPage = () => {
     allowedSet: ALLOWED_FILTERS,
     defaultStatuses: DEFAULT_SELECTED_STATUSES,
   });
+  const selectedStatusesKey = selectedStatuses.join(',');
   const sortOrder = normalizeEnumQueryParam(
     searchParams,
     'sort',
     ALLOWED_SORTS,
     'latest',
   );
+
+  const updateQueryParams = useCallback((nextStatuses, nextSort, nextKeyword = searchKeyword) => {
+    const normalizedStatuses = [...new Set(nextStatuses)]
+      .filter((value) => value !== 'all' && ALLOWED_FILTERS.has(value));
+
+    const params = buildQueryParams({
+      statuses:
+        normalizedStatuses.length > 0 &&
+        normalizedStatuses.length < DEFAULT_SELECTED_STATUSES.length
+          ? normalizedStatuses.join(',')
+          : undefined,
+      sort: nextSort !== 'latest' ? nextSort : undefined,
+      [SEARCH_QUERY_PARAM]: nextKeyword.trim() || undefined,
+    });
+
+    applySearchParamsIfChanged(searchParams, setSearchParams, params);
+  }, [searchKeyword, searchParams, setSearchParams]);
 
   const {
     data: allSuggestions = [],
@@ -109,15 +129,15 @@ const SuggestPage = () => {
   useEffect(() => {
     setManageMessage('');
     setManageError('');
-  }, [selectedStatuses.join(','), sortOrder]);
+  }, [selectedStatusesKey, sortOrder]);
 
   useEffect(() => {
     updateQueryParams(selectedStatuses, sortOrder, searchKeyword);
-  }, [searchKeyword]);
+  }, [searchKeyword, selectedStatuses, sortOrder, updateQueryParams]);
 
   useEffect(() => {
     setVisibleCount(SUGGESTIONS_PAGE_SIZE);
-  }, [selectedStatuses.join(','), sortOrder, allSuggestions.length]);
+  }, [selectedStatusesKey, sortOrder, allSuggestions.length]);
 
   useEffect(() => {
     return () => {
@@ -126,23 +146,6 @@ const SuggestPage = () => {
       }
     };
   }, []);
-
-  const updateQueryParams = (nextStatuses, nextSort, nextKeyword = searchKeyword) => {
-    const normalizedStatuses = [...new Set(nextStatuses)]
-      .filter((value) => value !== 'all' && ALLOWED_FILTERS.has(value));
-
-    const params = buildQueryParams({
-      statuses:
-        normalizedStatuses.length > 0 &&
-        normalizedStatuses.length < DEFAULT_SELECTED_STATUSES.length
-          ? normalizedStatuses.join(',')
-          : undefined,
-      sort: nextSort !== 'latest' ? nextSort : undefined,
-      [SEARCH_QUERY_PARAM]: nextKeyword.trim() || undefined,
-    });
-
-    applySearchParamsIfChanged(searchParams, setSearchParams, params);
-  };
 
   const toggleStatusFilter = (nextFilter) => {
     const normalized = normalizeEnumParam(nextFilter, ALLOWED_FILTERS, 'all');
@@ -302,7 +305,13 @@ const SuggestPage = () => {
       return;
     }
 
-    if (!window.confirm('이 제안을 삭제하시겠어요?')) {
+    const confirmed = await confirm("이 제안을 삭제하시겠어요?", {
+      title: "제안 삭제 확인",
+      confirmText: "삭제",
+      confirmTone: "danger",
+      description: "삭제 후 5초 이내에는 화면에서만 취소할 수 있습니다.",
+    });
+    if (!confirmed) {
       return;
     }
 

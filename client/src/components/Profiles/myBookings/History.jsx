@@ -11,6 +11,7 @@ import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
 import { useToast } from "@/components/Common/ToastProvider.jsx";
+import { useConfirm } from "@/components/Common/ConfirmProvider.jsx";
 import { queryKeys } from "@/utils/queryKeys.js";
 
 const statusLabelMap = {
@@ -75,6 +76,7 @@ const History = () => {
   const [sortOrder, setSortOrder] = useState("desc");
   const queryClient = useQueryClient();
   const toast = useToast();
+  const confirm = useConfirm();
   const {
     data: bookings = [],
     isLoading,
@@ -100,7 +102,12 @@ const History = () => {
   });
 
   const handleCancel = async (bookingId) => {
-    const confirmed = window.confirm("해당 예약을 취소하시겠습니까?");
+    const confirmed = await confirm("해당 예약을 취소하시겠습니까?", {
+      title: "예약 취소 확인",
+      confirmText: "취소하기",
+      confirmTone: "danger",
+      description: "취소 후에는 동일 조건으로 복구되지 않을 수 있습니다.",
+    });
     if (!confirmed) return;
 
     await cancelMutation.mutateAsync(bookingId);

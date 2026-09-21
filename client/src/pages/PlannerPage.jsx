@@ -17,6 +17,7 @@ import {
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
+import { useConfirm } from "@/components/Common/ConfirmProvider.jsx";
 import useSyncedDebouncedQueryValue from "@/hooks/useSyncedDebouncedQueryValue.js";
 
 const PLANNER_PAGE_SIZE = 5;
@@ -52,6 +53,7 @@ const PlannerPage = () => {
   );
   const [visibleCount, setVisibleCount] = useState(PLANNER_PAGE_SIZE);
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const {
     inputValue: searchInput,
     setInputValue: setSearchInput,
@@ -267,7 +269,13 @@ const PlannerPage = () => {
     setSubmitError("");
     setEditFormError("");
 
-    if (!window.confirm("해당 일정을 삭제하시겠어요?")) {
+    const confirmed = await confirm("해당 일정을 삭제하시겠어요?", {
+      title: "일정 삭제 확인",
+      confirmText: "삭제",
+      confirmTone: "danger",
+      description: "삭제된 일정은 복구할 수 없습니다.",
+    });
+    if (!confirmed) {
       return;
     }
 

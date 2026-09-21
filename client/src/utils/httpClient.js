@@ -122,7 +122,7 @@ export const installAuthFetchInterceptor = () => {
         ...fetchInit,
         headers: retryHeaders,
       });
-    } catch (error) {
+    } catch {
       clearAuthStorage();
       dispatchAuthFailure();
       return response;

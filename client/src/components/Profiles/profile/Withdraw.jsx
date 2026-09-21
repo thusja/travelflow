@@ -4,9 +4,11 @@ import { useMutation } from "@tanstack/react-query";
 import { clearAuthStorage } from "@/utils/authStorage.js";
 import { requestApi } from "@/utils/request.js";
 import { useToast } from "@/components/Common/ToastProvider.jsx";
+import { useConfirm } from "@/components/Common/ConfirmProvider.jsx";
 
 const Withdraw = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const [agreeChecked, setAgreeChecked] = useState(false);
   const [reason, setReason] = useState("");
@@ -47,7 +49,12 @@ const Withdraw = () => {
       return;
     }
 
-    const confirmed = window.confirm("정말 탈퇴하시겠습니까? 탈퇴 후에는 되돌릴 수 없습니다.");
+    const confirmed = await confirm("정말 탈퇴하시겠습니까? 탈퇴 후에는 되돌릴 수 없습니다.", {
+      title: "회원 탈퇴 확인",
+      confirmText: "탈퇴",
+      confirmTone: "danger",
+      description: "회원정보와 작성 데이터는 삭제되며 복구할 수 없습니다.",
+    });
     if (!confirmed) return;
 
     try {

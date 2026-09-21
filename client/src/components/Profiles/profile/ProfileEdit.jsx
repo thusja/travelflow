@@ -8,9 +8,11 @@ import { FiLoader } from "react-icons/fi";
 import { getAccessToken } from "@/utils/authStorage.js";
 import { requestApi } from "@/utils/request.js";
 import { useToast } from "@/components/Common/ToastProvider.jsx";
+import { useConfirm } from "@/components/Common/ConfirmProvider.jsx";
 
 const ProfileEdit = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
@@ -42,7 +44,7 @@ const ProfileEdit = () => {
       return;
     }
 
-    const isConfirmed = window.confirm("프로필을 수정하시겠습니까?");
+    const isConfirmed = await confirm("프로필을 수정하시겠습니까?");
     if (!isConfirmed) return;
 
     const formData = new FormData();

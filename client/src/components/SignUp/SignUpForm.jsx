@@ -18,7 +18,6 @@ const SignUpForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [confirmMessage, setConfirmMessage] = useState('');
-  const [confirmError, setConfirmError] = useState('');
   const [isConfirmMatch, setIsConfirmMatch] = useState(null);
 
   const signUpMutation = useMutation({
@@ -95,13 +94,13 @@ const SignUpForm = () => {
     }
 
     if (password !== confirmPassword) {
-      setConfirmError('비밀번호가 일치하지 않습니다.');
+      setConfirmMessage('비밀번호가 일치하지 않습니다.');
+      setIsConfirmMatch(false);
       refs.confirmPassword.current?.focus();
       return;
     }
 
     setErrorMessage('');
-    setConfirmError('');
 
     const userData = {
       firstname: firstName,

@@ -80,4 +80,8 @@
 
 - 컴포넌트 계층의 fetch 직접 호출 제거 완료
 - 공통 알림 UX를 토스트 컴포넌트 기반으로 통일 완료
+- 공통 확인 UX를 `window.confirm`에서 ConfirmProvider 모달 기반으로 통일 완료
+- 삭제/탈퇴/초기화 액션에 위험 톤(red) 확인 버튼 적용 완료
+- 위험 확인 모달에 보조 설명(description)과 경고 아이콘 추가 완료
 - 내부 인프라 fetch는 `utils/request.js`, `utils/httpClient.js`에만 유지
+- ESLint flat config 활성화 및 lint 무경고/무오류 상태 확보

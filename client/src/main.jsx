@@ -6,17 +6,20 @@ import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import { installAuthFetchInterceptor } from '@/utils/httpClient.js';
 import AppQueryProvider from '@/app/QueryProvider.jsx';
 import { ToastProvider } from '@/components/Common/ToastProvider.jsx';
+import { ConfirmProvider } from '@/components/Common/ConfirmProvider.jsx';
 
 installAuthFetchInterceptor();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ToastProvider>
-      <AppQueryProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </AppQueryProvider>
+      <ConfirmProvider>
+        <AppQueryProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </AppQueryProvider>
+      </ConfirmProvider>
     </ToastProvider>
   </React.StrictMode>
 )

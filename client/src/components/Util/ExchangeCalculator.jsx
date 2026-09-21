@@ -77,9 +77,6 @@ const ExchangeCalculator = () => {
   const getFlag = (currency) =>
     countries.find((c) => c.currency === currency)?.flag;
 
-  const getName = (currency) =>
-    countries.find((c) => c.currency === currency)?.name;
-
   return (
     <div className="max-w-4xl mx-auto mt-16 p-10 rounded-2xl shadow-xl bg-white space-y-10">
       {/* 기준 통화 */}

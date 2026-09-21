@@ -3,11 +3,13 @@ import { FaTrashAlt } from "react-icons/fa";
 import { MdDarkMode, MdLightMode, MdSettings } from "react-icons/md";
 import { clearAuthStorage } from "@/utils/authStorage.js";
 import { useToast } from "@/components/Common/ToastProvider.jsx";
+import { useConfirm } from "@/components/Common/ConfirmProvider.jsx";
 import { useNavigate } from 'react-router-dom';
 
 const AppSetting = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [theme, setTheme] = useState("system");
   const [autoLogout, setAutoLogout] = useState("30m");
   const [language, setLanguage] = useState("ko");
@@ -79,17 +81,24 @@ const AppSetting = () => {
     // 추후 i18n 연동 시: i18n.changeLanguage(language)
   }, [language]);
 
-  const handleClearCache = () => {
-    if (window.confirm("캐시와 임시 저장소를 초기화하시겠습니까?")) {
-      clearAuthStorage();
-      localStorage.removeItem("theme");
-      localStorage.removeItem("autoLogout");
-      localStorage.removeItem("language");
-      localStorage.removeItem("recentCities");
-      localStorage.removeItem("notifications");
-      sessionStorage.clear();
-      toast.success("저장소가 초기화되었습니다.");
-    }
+  const handleClearCache = async () => {
+    const confirmed = await confirm("캐시와 임시 저장소를 초기화하시겠습니까?", {
+      title: "저장 데이터 초기화",
+      confirmText: "초기화",
+      confirmTone: "danger",
+      description: "테마/언어/자동 로그아웃 등 로컬 설정이 삭제됩니다.",
+    });
+
+    if (!confirmed) return;
+
+    clearAuthStorage();
+    localStorage.removeItem("theme");
+    localStorage.removeItem("autoLogout");
+    localStorage.removeItem("language");
+    localStorage.removeItem("recentCities");
+    localStorage.removeItem("notifications");
+    sessionStorage.clear();
+    toast.success("저장소가 초기화되었습니다.");
   };
 
   return (

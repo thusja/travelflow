@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/Common/ToastProvider.jsx";
 import { requestApi } from "@/utils/request.js";
 
+const CITY_LIST = ["Seoul", "Busan", "Tokyo", "Osaka", "Paris", "London", "New York", "Beijing", "Sydney"];
+
 const WeatherInfo = () => {
   const [cityInput, setCityInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -9,8 +11,6 @@ const WeatherInfo = () => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
   const toast = useToast();
-
-  const cityList = ["Seoul", "Busan", "Tokyo", "Osaka", "Paris", "London", "New York", "Beijing", "Sydney"];
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("recentCities")) || [];
@@ -71,7 +71,7 @@ const WeatherInfo = () => {
   };
 
   useEffect(() => {
-    const filtered = cityList.filter((c) =>
+    const filtered = CITY_LIST.filter((c) =>
       c.toLowerCase().includes(cityInput.toLowerCase())
     );
     setSuggestions(cityInput ? filtered : []);
