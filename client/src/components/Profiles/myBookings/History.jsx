@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom"; // 상세 페이지 링크용
+import { Link } from "react-router-dom";
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getAccessToken } from "@/utils/authStorage.js";
+import { createIdempotencyKey } from "@/utils/idempotency.js";
+import { requestApi } from "@/utils/request.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
+import { useToast } from "@/components/Common/ToastProvider.jsx";
 import { queryKeys } from "@/utils/queryKeys.js";
 
 const statusLabelMap = {
@@ -18,7 +20,7 @@ const statusLabelMap = {
   pending: "예약 대기",
 };
 
-const toStatusLabel = (status) => statusLabelMap[status] || status || "알 수 없음";
+const toStatusLabel = (status) => statusLabelMap[status] || status || "상태 없음";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -34,19 +36,11 @@ const statusColor = {
 const itemsPerPage = 4;
 
 const fetchBookings = async () => {
-  const token = getAccessToken();
-  if (!token) return [];
-
-  const res = await fetch("http://localhost:5000/api/bookings", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || "예약 목록 조회 실패");
-  }
+  const data = await requestApi(
+    "/api/bookings",
+    {},
+    { requireAuth: true, errorMessage: "예약 목록 조회 실패" },
+  );
 
   return data.map((item) => ({
     id: item.id,
@@ -59,25 +53,20 @@ const fetchBookings = async () => {
 };
 
 const cancelBooking = async (bookingId) => {
-  const token = getAccessToken();
-  const idempotencyKey = `cancel-ui-${bookingId}-${Date.now()}`;
+  const idempotencyKey = createIdempotencyKey(`booking-cancel-${bookingId}`);
 
-  const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}/cancel`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      "Idempotency-Key": idempotencyKey,
+  return requestApi(
+    `/api/bookings/${bookingId}/cancel`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify({ reason: "user-ui-cancel" }),
     },
-    body: JSON.stringify({ reason: "user-ui-cancel" }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || "예약 취소 실패");
-  }
-
-  return data;
+    { requireAuth: true, errorMessage: "예약 취소 실패" },
+  );
 };
 
 const History = () => {
@@ -85,6 +74,7 @@ const History = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
   const queryClient = useQueryClient();
+  const toast = useToast();
   const {
     data: bookings = [],
     isLoading,
@@ -101,7 +91,11 @@ const History = () => {
       queryClient.invalidateQueries({
         queryKey: ["bookings", "list"],
       });
-      alert("예약이 취소되었습니다.");
+      toast.success("예약이 취소되었습니다.");
+    },
+    onError: (err) => {
+      console.error("예약 취소 오류:", err);
+      toast.error(err.message || "예약 취소 중 오류가 발생했습니다.");
     },
   });
 
@@ -109,12 +103,7 @@ const History = () => {
     const confirmed = window.confirm("해당 예약을 취소하시겠습니까?");
     if (!confirmed) return;
 
-    try {
-      await cancelMutation.mutateAsync(bookingId);
-    } catch (err) {
-      console.error("예약 취소 오류:", err);
-      alert("예약 취소 중 오류가 발생했습니다.");
-    }
+    await cancelMutation.mutateAsync(bookingId);
   };
 
   const handleFilterChange = (status) => {
@@ -216,7 +205,7 @@ const History = () => {
         ))}
       </div>
 
-      {/* 페이징 */}
+      {/* 페이지 */}
       <div className="flex justify-center mt-8 gap-2">
         {Array.from({ length: totalPages }, (_, i) => (
           <button

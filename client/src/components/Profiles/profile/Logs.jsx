@@ -1,47 +1,36 @@
-import { useEffect, useState } from "react";
-import { getAccessToken } from "@/utils/authStorage.js";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import LoadingState from "@/components/Common/LoadingState.jsx";
+import EmptyState from "@/components/Common/EmptyState.jsx";
+import ErrorState from "@/components/Common/ErrorState.jsx";
+import { queryKeys } from "@/utils/queryKeys.js";
+import { requestApi } from "@/utils/request.js";
 
 const Logs = () => {
-  const [logs, setLogs] = useState([]);
-  const [currentIp, setCurrentIp] = useState("");
-  const [previousIp, setPreviousIp] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [filteredLogs, setFilteredLogs] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState("all");
 
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    const fetchLogs = async () => {
-      const token = getAccessToken();
+  const {
+    data: logs = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.users.logs(),
+    queryFn: () =>
+      requestApi(
+        "/api/users/logs",
+        {},
+        { requireAuth: true, errorMessage: "로그인 기록 불러오기 실패" },
+      ),
+  });
 
-      try {
-        const res = await fetch("http://localhost:5000/api/users/logs", {
-          headers: { Authorization: `Bearer ${token}`},
-        });
-
-        const data = await res.json();
-        setLogs(data);
-        setFilteredLogs(data);
-
-        if(data.length > 0) {
-          setCurrentIp(data[0].ip);
-          if(data.length > 1) setPreviousIp(data[1].ip);
-        }
-      }
-      catch(err) {
-        console.error("로그인 기록 가져오기 오류:", err);
-        alert("로그인 기록 불러오기에 실패했습니다.");
-      }
-    };
-    fetchLogs();
-  },[]);
-
-  // 기간에 따른 필터링
-  useEffect(() => {
-    if(selectedPeriod === "all") {
-      setFilteredLogs(logs);
-      return;
+  // 기간별 필터링
+  const filteredLogs = useMemo(() => {
+    if (selectedPeriod === "all") {
+      return logs;
     }
 
     const now = new Date();
@@ -67,14 +56,15 @@ const Logs = () => {
         startDate = null;
     }
 
-    const filtered = logs.filter((log) => {
+    return logs.filter((log) => {
       const createdAt = new Date(log.created_at);
       return startDate ? createdAt >= startDate : true;
     });
+  }, [logs, selectedPeriod]);
 
-    setFilteredLogs(filtered);
+  useEffect(() => {
     setCurrentPage(1);
-  }, [selectedPeriod, logs]);
+  }, [selectedPeriod]);
 
   const formatKoreanDateTime = (timestamp) => {
     return new Intl.DateTimeFormat("ko-KR", {
@@ -88,10 +78,20 @@ const Logs = () => {
     }).format(new Date(timestamp));
   };
 
-  // 페이징 계산
+  // 페이지 계산
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+  const currentIp = logs[0]?.ip || "";
+  const previousIp = logs[1]?.ip || "";
+
+  if (isLoading) {
+    return <LoadingState message="로그인 기록을 불러오는 중..." />;
+  }
+
+  if (isError) {
+    return <ErrorState message={error?.message || "로그인 기록 불러오기에 실패했습니다."} />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto mt-16 p-6 bg-white rounded-xl shadow text-gray-800">
@@ -126,6 +126,9 @@ const Logs = () => {
       </div>
 
       {/* 로그인 기록 테이블 */}
+      {currentLogs.length === 0 ? (
+        <EmptyState message="선택한 기간의 로그인 기록이 없습니다." />
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full table-auto text-sm text-left border-t">
           <thead>
@@ -146,6 +149,7 @@ const Logs = () => {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
@@ -168,9 +172,9 @@ const Logs = () => {
 
       {/* 안내문 */}
       <div className="mt-6 text-sm text-gray-500 text-left leading-relaxed">
-        - 최대 3개월 이내의 기록을 확인하실 수 있습니다.
+        - 최근 3개월 이내 기록만 확인하실 수 있습니다.
         <br />
-        - 타인의 로그인으로 의심되는 경우 보안 서비스 이용을 통해 정보를 보호하실 수 있습니다.
+        - 의심스러운 로그인이 보이면 보안 설정을 이용해 계정을 보호하세요.
       </div>
     </div>
   );

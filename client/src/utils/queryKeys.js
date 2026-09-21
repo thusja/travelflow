@@ -5,6 +5,18 @@ export const queryKeys = {
   bookings: {
     list: (params = {}) => ["bookings", "list", params],
   },
+  reviews: {
+    reviewable: (params = {}) => ["reviews", "reviewable", params],
+  },
+  points: {
+    summary: () => ["points", "summary"],
+  },
+  coupons: {
+    list: (params = {}) => ["coupons", "list", params],
+  },
+  users: {
+    logs: (params = {}) => ["users", "logs", params],
+  },
   planner: {
     list: (params = {}) => ["planner", "list", params],
   },

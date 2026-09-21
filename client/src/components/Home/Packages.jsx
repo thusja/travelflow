@@ -6,17 +6,7 @@ import LoadingState from '@/components/Common/LoadingState.jsx';
 import EmptyState from '@/components/Common/EmptyState.jsx';
 import ErrorState from '@/components/Common/ErrorState.jsx';
 import { queryKeys } from '@/utils/queryKeys.js';
-
-const fetchPackages = async () => {
-  const res = await fetch("http://localhost:5000/api/packages");
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || "패키지 로딩 실패");
-  }
-
-  return data;
-};
+import { getPackages } from '@/utils/api.js';
 
 const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState('Hot Deals');
@@ -27,7 +17,7 @@ const Packages = () => {
     isError,
   } = useQuery({
     queryKey: queryKeys.packages.list({ source: "home" }),
-    queryFn: fetchPackages,
+    queryFn: getPackages,
   });
 
   const tabs = ['Hot Deals', 'Special Offers', 'Discounts'];

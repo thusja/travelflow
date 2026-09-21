@@ -2,13 +2,15 @@ import loginCover from '@/assets/images/loginCover.png';
 import LoginForm from '@/components/Login/LoginForm';
 import SocialLogin from '@/components/Login/SocialLogin';
 import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = (userData, token, refreshToken) => {
     login(userData, token, refreshToken);
-    window.location.href = "/";
+    navigate('/');
   };
 
   return (
@@ -21,7 +23,7 @@ const LoginPage = () => {
 
           <p className="text-sm mt-3">
             Don't have an account?
-            <a href="/SignUp" className="text-blue-600 font-semibold pl-1">Sign Up</a>
+            <Link to="/signup" className="text-blue-600 font-semibold pl-1">Sign Up</Link>
           </p>
         </div>
 

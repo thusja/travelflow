@@ -1,12 +1,42 @@
 import { useState, useRef } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { requestApi } from '@/utils/request.js';
+import { useToast } from '@/components/Common/ToastProvider.jsx';
 
 const LoginForm = ({ onLogin }) => {
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isDeletedUser, setIsDeletedUser] = useState(false);
+
+  const loginMutation = useMutation({
+    mutationFn: ({ email, password }) =>
+      requestApi(
+        '/api/auth/login',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        },
+        { errorMessage: '로그인에 실패했습니다.' },
+      ),
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (email) =>
+      requestApi(
+        '/api/auth/reactivate',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        },
+        { errorMessage: '재가입 요청에 실패했습니다.' },
+      ),
+  });
 
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
@@ -14,7 +44,7 @@ const LoginForm = ({ onLogin }) => {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const showAlertAndFocus = (message, ref) => {
-    alert(message);
+    toast.error(message);
     ref.current?.focus();
   };
 
@@ -34,51 +64,31 @@ const LoginForm = ({ onLogin }) => {
     setIsDeletedUser(false);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      if(!res.ok) {
-        if(data.message?.includes("탈퇴")) {
-          setIsDeletedUser(true);
-        }
-        setErrorMsg(data.message || "로그인에 실패했습니다.");
-        return;
-      }
-
-      // 로그인 성공
+      const data = await loginMutation.mutateAsync({ email, password });
       onLogin(data.user, data.token, data.refreshToken);
-    }
-    catch(err) {
-      console.error("로그인 요청 오류 : ", err);
-      setErrorMsg("서버 오류가 발생했습니다.");
+    } catch (err) {
+      console.error('로그인 요청 오류:', err);
+      if (err.message?.includes('탈퇴')) {
+        setIsDeletedUser(true);
+      }
+      setErrorMsg(err.message || '서버 오류가 발생했습니다.');
     }
   };
 
   const handleReactivate = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/reactivate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("재가입이 완료되었습니다. 다시 로그인해주세요.");
-        setIsDeletedUser(false);
-      } else {
-        alert(`재가입 실패: ${data.message}`);
-      }
+    if (!email.trim()) {
+      setErrorMsg('재가입할 이메일을 먼저 입력해주세요.');
+      emailRef.current?.focus();
+      return;
     }
-    catch(err) {
-      console.error("재가입 요청 오류 : ",err);
-      alert("재가입 요청 중 오류 발생");
+
+    try {
+      await reactivateMutation.mutateAsync(email);
+      toast.success('재가입이 완료되었습니다. 다시 로그인해주세요.');
+      setIsDeletedUser(false);
+    } catch (err) {
+      console.error('재가입 요청 오류:', err);
+      toast.error(err.message || '재가입 요청 중 오류 발생');
     }
   };
 
@@ -127,18 +137,20 @@ const LoginForm = ({ onLogin }) => {
           <button
             type="button"
             onClick={handleReactivate}
+            disabled={reactivateMutation.isPending}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
           >
-            재가입 요청하기
+            {reactivateMutation.isPending ? '요청 중...' : '재가입 요청하기'}
           </button>
         </div>
       )}
 
       <button
         type="submit"
+        disabled={loginMutation.isPending}
         className="w-full sm:w-4/5 mt-6 py-2 bg-black text-white font-bold rounded-md hover:scale-105 transition"
       >
-        LOGIN
+        {loginMutation.isPending ? '로그인 중...' : 'LOGIN'}
       </button>
     </form>
   );

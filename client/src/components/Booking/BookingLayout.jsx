@@ -3,7 +3,8 @@ import DatePicker from 'react-datepicker';
 import dayjs from 'dayjs';
 import 'react-datepicker/dist/react-datepicker.css';
 import ko from 'date-fns/locale/ko';
-import { getAccessToken } from '@/utils/authStorage.js';
+import { createIdempotencyKey } from '@/utils/idempotency.js';
+import { requestApi } from '@/utils/request.js';
 
 const BookingLayout = () => {
   const [packages, setPackages] = useState([]);
@@ -19,18 +20,18 @@ const BookingLayout = () => {
   useEffect(() => {
     const fetchCatalog = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/bookings/catalog");
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "예약 카탈로그 조회 실패");
-        }
+        const data = await requestApi(
+          "/api/bookings/catalog",
+          {},
+          { errorMessage: "예약 카탈로그 조회 실패" },
+        );
 
         setPackages(data);
         if (data.length > 0) {
           setSelectedPackageId(data[0].id);
         }
       } catch (err) {
-        console.error("예약 카탈로그 조회 오류:", err);
+        console.error('예약 카탈로그 조회 오류:', err);
       }
     };
 
@@ -41,14 +42,8 @@ const BookingLayout = () => {
     setError('');
     setSuccess('');
 
-    const token = getAccessToken();
-    if (!token) {
-      setError("로그인 후 예약할 수 있습니다.");
-      return;
-    }
-
     if (!selectedPackageId) {
-      setError("예약할 패키지를 선택해주세요.");
+      setError('예약할 패키지를 선택해주세요.');
       return;
     }
 
@@ -64,36 +59,34 @@ const BookingLayout = () => {
 
     try {
       setSubmitting(true);
-      const idempotencyKey = `booking-ui-${Date.now()}`;
-      const res = await fetch("http://localhost:5000/api/bookings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "Idempotency-Key": idempotencyKey,
+      const idempotencyKey = createIdempotencyKey("booking-create");
+      await requestApi(
+        "/api/bookings",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({
+            packageId: selectedPackageId,
+            bookingDate: dayjs(checkIn).format("YYYY-MM-DD"),
+            adults,
+            children,
+            checkoutDate: dayjs(checkOut).format("YYYY-MM-DD"),
+          }),
         },
-        body: JSON.stringify({
-          packageId: selectedPackageId,
-          bookingDate: dayjs(checkIn).format("YYYY-MM-DD"),
-          adults,
-          children,
-          checkoutDate: dayjs(checkOut).format("YYYY-MM-DD"),
-        }),
-      });
+        { requireAuth: true, errorMessage: '예약 생성 실패' },
+      );
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "예약 생성 실패");
-      }
-
-      setSuccess('예약이 완료되었습니다!');
+      setSuccess('예약이 완료되었습니다.');
       setCheckIn(null);
       setCheckOut(null);
       setAdults(1);
       setChildren(0);
     } catch (err) {
-      console.error("예약 생성 오류:", err);
-      setError(err.message || "예약 생성 중 오류가 발생했습니다.");
+      console.error('예약 생성 오류:', err);
+      setError(err.message || '예약 생성 중 오류가 발생했습니다.');
     } finally {
       setSubmitting(false);
     }
@@ -169,7 +162,7 @@ const BookingLayout = () => {
         {/* 인원 수 */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="w-full">
-            <label className="block text-sm font-medium mb-1">어른</label>
+            <label className="block text-sm font-medium mb-1">성인</label>
             <select
               value={adults}
               onChange={(e) => setAdults(Number(e.target.value))}
@@ -181,7 +174,7 @@ const BookingLayout = () => {
             </select>
           </div>
           <div className="w-full">
-            <label className="block text-sm font-medium mb-1">아이</label>
+            <label className="block text-sm font-medium mb-1">아동</label>
             <select
               value={children}
               onChange={(e) => setChildren(Number(e.target.value))}
@@ -200,7 +193,7 @@ const BookingLayout = () => {
           disabled={submitting}
           className="w-full bg-black text-white py-2 rounded-md font-semibold hover:scale-105 transition"
         >
-          {submitting ? "예약 처리 중..." : "예약하기"}
+          {submitting ? '예약 처리 중...' : '예약하기'}
         </button>
 
         {/* 메시지 */}

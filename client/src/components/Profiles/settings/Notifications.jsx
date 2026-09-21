@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { MdSettings } from "react-icons/md";
-import { getAccessToken } from "@/utils/authStorage.js";
+import { requestApi } from "@/utils/request.js";
+import { useToast } from "@/components/Common/ToastProvider.jsx";
 
 const Notifications = () => {
+  const toast = useToast();
   const [settings, setSettings] = useState({
     email: true,
     reminder: true,
@@ -10,6 +13,22 @@ const Notifications = () => {
     security: true,
     update: true,
     push: false,
+  });
+  const [pendingKey, setPendingKey] = useState("");
+
+  const updateNotificationMutation = useMutation({
+    mutationFn: (updated) =>
+      requestApi(
+        "/api/users/notifications",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ notifications: updated }),
+        },
+        { requireAuth: true, errorMessage: "업데이트 실패" },
+      ),
   });
 
   useEffect(() => {
@@ -22,26 +41,23 @@ const Notifications = () => {
   }, [settings]);
 
   const toggle = async (key) => {
+    if (updateNotificationMutation.isPending) {
+      return;
+    }
+
+    const previous = settings;
     const updated = { ...settings, [key]: !settings[key] };
+    setPendingKey(key);
     setSettings(updated);
 
     try {
-      const token = getAccessToken();
-      const res = await fetch("http://localhost:5000/api/users/notifications", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ notifications: updated }),
-      });
-
-      if (!res.ok) {
-        throw new Error("업데이트 실패");
-      }
+      await updateNotificationMutation.mutateAsync(updated);
     } catch (err) {
-      alert("알림 설정 저장 중 오류가 발생했습니다.");
+      setSettings(previous);
+      toast.error("알림 설정 저장 중 오류가 발생했습니다.");
       console.error(err);
+    } finally {
+      setPendingKey("");
     }
   };
 
@@ -54,7 +70,7 @@ const Notifications = () => {
     {
       key: "reminder",
       title: "하루 전 알림",
-      desc: "예약 하루 전에 이메일 또는 앱으로 알려드립니다.",
+      desc: "예약 하루 전에 이메일 또는 알림을 보내드립니다.",
     },
     {
       key: "marketing",
@@ -73,8 +89,8 @@ const Notifications = () => {
     },
     {
       key: "push",
-      title: "앱 푸시 알림",
-      desc: "앱 설치 시 푸시로 실시간 알림을 수신합니다.",
+      title: "푸시 알림",
+      desc: "모바일 앱 푸시 알림 수신 여부를 설정합니다.",
     },
   ];
 
@@ -97,12 +113,16 @@ const Notifications = () => {
                 type="checkbox"
                 className="sr-only peer"
                 checked={settings[item.key]}
+                disabled={updateNotificationMutation.isPending}
                 onChange={() => toggle(item.key)}
               />
               <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 relative transition">
                 <div className="w-4 h-4 bg-white rounded-full absolute top-1 left-1 peer-checked:translate-x-5 transition-transform shadow" />
               </div>
             </label>
+            {pendingKey === item.key && updateNotificationMutation.isPending && (
+              <span className="text-xs text-blue-600 ml-2">저장 중...</span>
+            )}
           </div>
         ))}
       </section>

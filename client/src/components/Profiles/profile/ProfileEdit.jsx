@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import ProfileImageEditor from "@/components/Profiles/profile/ProfileImageEditor";
 import defaultProfile from "@/assets/images/default-profile.png";
 import { FiLoader } from "react-icons/fi";
 import { getAccessToken } from "@/utils/authStorage.js";
+import { requestApi } from "@/utils/request.js";
+import { useToast } from "@/components/Common/ToastProvider.jsx";
 
 const ProfileEdit = () => {
+  const toast = useToast();
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
@@ -14,23 +18,33 @@ const ProfileEdit = () => {
   const [file, setFile] = useState(null);
   const [nickname, setNickname] = useState(user.nickname || "");
   const [phone, setPhone] = useState(user.phone || "");
-  const [loading, setLoading] = useState(false);
+
+  const saveProfileMutation = useMutation({
+    mutationFn: (formData) =>
+      requestApi(
+        "/api/users/profile",
+        {
+          method: "PUT",
+          body: formData,
+        },
+        { requireAuth: true, errorMessage: "프로필 저장 실패" },
+      ),
+  });
 
   const handleSave = async () => {
     if (!nickname.trim()) {
-      alert("닉네임을 입력해주세요.");
+      toast.error("닉네임을 입력해주세요.");
       return;
     }
 
     if (!/^\d{10,11}$/.test(phone)) {
-      alert("유효한 전화번호를 입력해주세요. 숫자만 입력해주세요.");
+      toast.error("유효한 전화번호를 입력해주세요. 숫자만 입력해주세요.");
       return;
     }
 
-    const confirm = window.confirm("프로필을 저장하시겠습니까?");
-    if (!confirm) return;
+    const isConfirmed = window.confirm("프로필을 수정하시겠습니까?");
+    if (!isConfirmed) return;
 
-    setLoading(true);
     const formData = new FormData();
     formData.append("nickname", nickname);
     formData.append("phone", phone);
@@ -40,28 +54,14 @@ const ProfileEdit = () => {
 
     try {
       const token = getAccessToken();
-      const res = await fetch("http://localhost:5000/api/users/profile", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const data = await saveProfileMutation.mutateAsync(formData);
 
-      const data = await res.json();
-
-      if (res.ok) {
-        login(data.user, token);
-        alert("프로필이 저장되었습니다.");
-        navigate("/profile/info");
-      } else {
-        alert("저장 실패: " + data.message);
-      }
+      login(data.user, token);
+      toast.success("프로필이 수정되었습니다.");
+      navigate("/profile/info");
     } catch (err) {
-      console.error("저장 오류:", err);
-      alert("서버 오류로 저장에 실패했습니다.");
-    } finally {
-      setLoading(false);
+      console.error("프로필 수정 오류:", err);
+      toast.error(err.message || "서버 오류로 수정에 실패했습니다.");
     }
   };
 
@@ -130,10 +130,10 @@ const ProfileEdit = () => {
         </button>
         <button
           onClick={handleSave}
-          disabled={loading}
+          disabled={saveProfileMutation.isPending}
           className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
         >
-          {loading ? (
+          {saveProfileMutation.isPending ? (
             <>
               <FiLoader className="animate-spin" />
               저장 중...

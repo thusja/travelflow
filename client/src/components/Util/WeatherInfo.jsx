@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/Common/ToastProvider.jsx";
+import { requestApi } from "@/utils/request.js";
 
 const WeatherInfo = () => {
   const [cityInput, setCityInput] = useState("");
@@ -6,6 +8,7 @@ const WeatherInfo = () => {
   const [recentCities, setRecentCities] = useState([]);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const cityList = ["Seoul", "Busan", "Tokyo", "Osaka", "Paris", "London", "New York", "Beijing", "Sydney"];
 
@@ -20,8 +23,11 @@ const WeatherInfo = () => {
       const { latitude, longitude } = pos.coords;
       try {
         setLoading(true);
-        const res = await fetch(`/api/weather/current?lat=${latitude}&lon=${longitude}`);
-        const data = await res.json();
+        const data = await requestApi(
+          `/api/weather/current?lat=${latitude}&lon=${longitude}`,
+          {},
+          { errorMessage: "현재 위치 날씨 조회 실패" },
+        );
         setWeather({
           city: data.name,
           temp: data.main.temp,
@@ -41,24 +47,24 @@ const WeatherInfo = () => {
     if (!cityInput.trim()) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/weather/by-city?city=${encodeURIComponent(cityInput)}`);
-      const data = await res.json();
-      if (res.ok) {
-        setWeather({
-          city: data.name,
-          temp: data.main.temp,
-          description: data.weather[0].description,
-          humidity: data.main.humidity,
-          wind: data.wind.speed,
-        });
-        const updated = [data.name, ...recentCities.filter((c) => c !== data.name)].slice(0, 5);
-        setRecentCities(updated);
-        localStorage.setItem("recentCities", JSON.stringify(updated));
-      } else {
-        alert("도시 정보를 찾을 수 없습니다.");
-      }
+      const data = await requestApi(
+        `/api/weather/by-city?city=${encodeURIComponent(cityInput)}`,
+        {},
+        { errorMessage: "도시 정보를 찾을 수 없습니다." },
+      );
+      setWeather({
+        city: data.name,
+        temp: data.main.temp,
+        description: data.weather[0].description,
+        humidity: data.main.humidity,
+        wind: data.wind.speed,
+      });
+      const updated = [data.name, ...recentCities.filter((c) => c !== data.name)].slice(0, 5);
+      setRecentCities(updated);
+      localStorage.setItem("recentCities", JSON.stringify(updated));
     } catch (err) {
       console.error("도시 검색 실패:", err.message);
+      toast.error(err.message || "날씨 검색 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }

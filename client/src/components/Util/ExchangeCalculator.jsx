@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import CurrencyCard from "./CurrencyCard";
+import { requestApi } from "@/utils/request.js";
 
 const ExchangeCalculator = () => {
   const [countries, setCountries] = useState([]);
@@ -12,26 +13,33 @@ const ExchangeCalculator = () => {
 
   useEffect(() => {
     const fetchCountries = async () => {
-      const res = await fetch("https://restcountries.com/v3.1/all");
-      const data = await res.json();
+      try {
+        const data = await requestApi(
+          "https://restcountries.com/v3.1/all",
+          {},
+          { errorMessage: "국가 목록 조회 실패" },
+        );
 
-      const filtered = data
-        .filter((c) => c.currencies)
-        .map((c) => {
-          const currencyCode = Object.keys(c.currencies)[0];
-          return {
-            name: c.name.common,
-            currency: currencyCode,
-            flag: c.flags.svg,
-          };
-        });
+        const filtered = data
+          .filter((c) => c.currencies)
+          .map((c) => {
+            const currencyCode = Object.keys(c.currencies)[0];
+            return {
+              name: c.name.common,
+              currency: currencyCode,
+              flag: c.flags.svg,
+            };
+          });
 
-      const unique = filtered.filter(
-        (c, i, arr) =>
-          arr.findIndex((x) => x.currency === c.currency) === i
-      );
+        const unique = filtered.filter(
+          (c, i, arr) =>
+            arr.findIndex((x) => x.currency === c.currency) === i
+        );
 
-      setCountries(unique);
+        setCountries(unique);
+      } catch (err) {
+        console.error("국가 목록 조회 실패:", err.message);
+      }
     };
 
     fetchCountries();
@@ -40,16 +48,11 @@ const ExchangeCalculator = () => {
   useEffect(() => {
     const fetchRates = async () => {
       try {
-        const res = await fetch(
-          `/api/exchange-rates?base=${base}&symbols=${target},KRW,JPY,EUR,CNY,GBP`
+        const data = await requestApi(
+          `/api/exchange-rates?base=${base}&symbols=${target},KRW,JPY,EUR,CNY,GBP`,
+          {},
+          { errorMessage: "환율 조회 실패" },
         );
-
-        const contentType = res.headers.get("content-type");
-        if (!res.ok || !contentType.includes("application/json")) {
-          throw new Error("API 응답이 JSON이 아닙니다");
-        }
-
-        const data = await res.json();
         setRates(data.rates);
         setLastUpdated(new Date().toLocaleString());
       } catch (err) {

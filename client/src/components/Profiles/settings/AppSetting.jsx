@@ -2,8 +2,12 @@ import { useState, useEffect } from "react";
 import { FaTrashAlt } from "react-icons/fa";
 import { MdDarkMode, MdLightMode, MdSettings } from "react-icons/md";
 import { clearAuthStorage } from "@/utils/authStorage.js";
+import { useToast } from "@/components/Common/ToastProvider.jsx";
+import { useNavigate } from 'react-router-dom';
 
 const AppSetting = () => {
+  const navigate = useNavigate();
+  const toast = useToast();
   const [theme, setTheme] = useState("system");
   const [autoLogout, setAutoLogout] = useState("30m");
   const [language, setLanguage] = useState("ko");
@@ -38,9 +42,9 @@ const AppSetting = () => {
 
     let timer;
     const logout = () => {
-      alert("자동 로그아웃 되었습니다.");
+      toast.info("자동 로그아웃 되었습니다.");
       clearAuthStorage();
-      window.location.href = "/login";
+      navigate('/login');
     };
 
     const resetTimer = () => {
@@ -57,7 +61,7 @@ const AppSetting = () => {
       if (timer) clearTimeout(timer);
       events.forEach((e) => window.removeEventListener(e, resetTimer));
     };
-  }, [autoLogout]);
+  }, [autoLogout, navigate, toast]);
 
   // 설정 초기값 불러오기
   useEffect(() => {
@@ -84,7 +88,7 @@ const AppSetting = () => {
       localStorage.removeItem("recentCities");
       localStorage.removeItem("notifications");
       sessionStorage.clear();
-      alert("저장소가 초기화되었습니다.");
+      toast.success("저장소가 초기화되었습니다.");
     }
   };
 

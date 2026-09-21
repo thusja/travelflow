@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getAccessToken } from "@/utils/authStorage.js";
+import { requestApi } from "@/utils/request.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
 
@@ -11,7 +11,7 @@ const statusLabelMap = {
   pending: "예약 대기",
 };
 
-const toStatusLabel = (status) => statusLabelMap[status] || status || "알 수 없음";
+const toStatusLabel = (status) => statusLabelMap[status] || status || "상태 없음";
 
 const statusColor = {
   "예약 완료": "text-green-500",
@@ -28,23 +28,12 @@ const BookingDetail = () => {
 
   useEffect(() => {
     const fetchBooking = async () => {
-      const token = getAccessToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "예약 상세 조회 실패");
-        }
+        const data = await requestApi(
+          `/api/bookings/${bookingId}`,
+          {},
+          { requireAuth: true, errorMessage: "예약 상세 조회 실패" },
+        );
 
         setBooking({
           id: data.id,

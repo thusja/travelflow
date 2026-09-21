@@ -12,6 +12,7 @@ const MyProfileSidebar = () => {
     {
       key: "profile",
       title: "내 정보",
+      sectionRoot: "/profile",
       basePath: "/profile/info",
       items: [
         { key: "info", label: "내 정보 보기", path: "/profile/info", icon: <FiUser /> },
@@ -23,6 +24,7 @@ const MyProfileSidebar = () => {
     {
       key: "myBookings",
       title: "나의 예약",
+      sectionRoot: "/myBookings",
       basePath: "/myBookings/history",
       items: [
         { key: "myBookings", label: "예약 요약", path: "/myBookings/history", icon: <FiClipboard /> },
@@ -34,6 +36,7 @@ const MyProfileSidebar = () => {
     {
       key: "settings",
       title: "설정",
+      sectionRoot: "/settings",
       basePath: "/settings/app",
       items: [
         { key: "app", label: "앱 설정", path: "/settings/app", icon: <FiSettings /> },
@@ -52,7 +55,7 @@ const MyProfileSidebar = () => {
           <Link
             to={section.basePath}
             className={`block text-lg font-semibold mb-3 transition ${
-              currentPath.startsWith(section.basePath) ? "text-blue-600" : "text-gray-800 hover:text-blue-500"
+              currentPath.startsWith(section.sectionRoot) ? "text-blue-600" : "text-gray-800 hover:text-blue-500"
             }`}
           >
             {section.title}

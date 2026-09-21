@@ -1,71 +1,75 @@
 import { useState } from "react";
-import { getAccessToken } from "@/utils/authStorage.js";
+import { requestApi } from "@/utils/request.js";
+import { useToast } from "@/components/Common/ToastProvider.jsx";
 
 const Password = () => {
-  const [step, setStep] = useState(1); // 1단계: 현재 비밀번호 확인
+  const toast = useToast();
+  const [step, setStep] = useState(1);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const verifyCurrentPassword = async () => {
-    if (!currentPassword) return alert("현재 비밀번호를 입력해주세요.");
+    if (!currentPassword) {
+      toast.error("현재 비밀번호를 입력해주세요.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const token = getAccessToken();
-      const res = await fetch("http://localhost:5000/api/users/verify-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      await requestApi(
+        "/api/users/verify-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: currentPassword }),
         },
-        body: JSON.stringify({ password: currentPassword }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setStep(2); // 다음 단계로 이동
-      } else {
-        alert("비밀번호가 올바르지 않습니다.");
-      }
+        { requireAuth: true, errorMessage: "비밀번호 확인 실패" },
+      );
+      setStep(2);
     } catch (err) {
       console.error("비밀번호 확인 오류:", err);
-      alert("서버 오류로 인증에 실패했습니다.");
+      toast.error(err.message || "서버 오류로 인증에 실패했습니다.");
     } finally {
       setLoading(false);
     }
   };
 
   const handlePasswordChange = async () => {
-    if (!newPassword || !confirmPassword) return alert("새 비밀번호를 모두 입력해주세요.");
-    if (newPassword !== confirmPassword) return alert("새 비밀번호와 확인이 일치하지 않습니다.");
-    if (newPassword.length < 6) return alert("비밀번호는 최소 6자 이상이어야 합니다.");
+    if (!newPassword || !confirmPassword) {
+      toast.error("새 비밀번호를 모두 입력해주세요.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("새 비밀번호 확인이 일치하지 않습니다.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("비밀번호는 최소 6자 이상이어야 합니다.");
+      return;
+    }
 
     setLoading(true);
     try {
-      const token = getAccessToken();
-      const res = await fetch("http://localhost:5000/api/users/password", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      await requestApi(
+        "/api/users/password",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentPassword, newPassword }),
         },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
+        { requireAuth: true, errorMessage: "비밀번호 변경 실패" },
+      );
 
-      const data = await res.json();
-      if (res.ok) {
-        alert("비밀번호가 성공적으로 변경되었습니다.");
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setStep(1);
-      } else {
-        alert("변경 실패: " + data.message);
-      }
+      toast.success("비밀번호가 성공적으로 변경되었습니다.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setStep(1);
     } catch (err) {
       console.error("비밀번호 변경 오류:", err);
-      alert("서버 오류로 변경에 실패했습니다.");
+      toast.error(err.message || "서버 오류로 변경에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -131,7 +135,7 @@ const Password = () => {
                 disabled={loading}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? "저장 중..." : "비밀번호 변경"}
+                {loading ? "변경 중..." : "비밀번호 변경"}
               </button>
             </div>
           </div>

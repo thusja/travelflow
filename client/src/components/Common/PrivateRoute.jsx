@@ -1,14 +1,18 @@
 import { Navigate } from "react-router-dom";
-import { getStoredUser } from "@/utils/authStorage.js";
+import { useAuth } from "@/contexts/AuthContext.jsx";
 
 const PrivateRoute = ({ children }) => {
-  const user = getStoredUser();
+  const { user, isAuthReady } = useAuth();
 
-  if(!user) {
+  if (!isAuthReady) {
+    return <div className="p-6 text-center text-gray-600">세션 확인 중...</div>;
+  }
+
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   return children;
-}
+};
 
 export default PrivateRoute;

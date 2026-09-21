@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getAccessToken } from "@/utils/authStorage.js";
+import { requestApi } from "@/utils/request.js";
 import LoadingState from "@/components/Common/LoadingState.jsx";
 import EmptyState from "@/components/Common/EmptyState.jsx";
 import ErrorState from "@/components/Common/ErrorState.jsx";
@@ -14,26 +14,18 @@ const formatDate = (value) => {
 
 const statusColor = {
   "취소 완료": "text-gray-500",
-  "환불 진행중": "text-yellow-500",
+  "환불 진행 중": "text-yellow-500",
   "환불 완료": "text-green-600",
 };
 
 const itemsPerPage = 4;
 
 const fetchCancelledBookings = async () => {
-  const token = getAccessToken();
-  if (!token) return [];
-
-  const res = await fetch("http://localhost:5000/api/bookings?status=cancelled", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || "취소 목록 조회 실패");
-  }
+  const data = await requestApi(
+    "/api/bookings?status=cancelled",
+    {},
+    { requireAuth: true, errorMessage: "취소 목록 조회 실패" },
+  );
 
   return data.map((item) => ({
     id: item.id,
@@ -151,7 +143,7 @@ const Cancel = () => {
         ))}
       </div>
 
-      {/* 페이징 */}
+      {/* 페이지 */}
       <div className="flex justify-center mt-8 gap-2">
         {Array.from({ length: totalPages }, (_, i) => (
           <button

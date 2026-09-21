@@ -1,7 +1,13 @@
 import { useState, useRef } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { requestApi } from '@/utils/request.js';
+import { useToast } from '@/components/Common/ToastProvider.jsx';
 
 const SignUpForm = () => {
+  const toast = useToast();
+  const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -14,6 +20,19 @@ const SignUpForm = () => {
   const [confirmMessage, setConfirmMessage] = useState('');
   const [confirmError, setConfirmError] = useState('');
   const [isConfirmMatch, setIsConfirmMatch] = useState(null);
+
+  const signUpMutation = useMutation({
+    mutationFn: (userData) =>
+      requestApi(
+        '/api/auth/signup',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+        },
+        { errorMessage: '회원가입에 실패했습니다.' },
+      ),
+  });
 
   const refs = {
     firstName: useRef(null),
@@ -45,38 +64,38 @@ const SignUpForm = () => {
       setConfirmMessage('');
       setIsConfirmMatch(null);
     } else if (value === password) {
-      setConfirmMessage('패스워드가 일치합니다.');
+      setConfirmMessage('비밀번호가 일치합니다.');
       setIsConfirmMatch(true);
     } else {
-      setConfirmMessage('패스워드가 일치하지 않습니다.');
+      setConfirmMessage('비밀번호가 일치하지 않습니다.');
       setIsConfirmMatch(false);
     }
   };
 
   const showToastAndFocus = (msg, refName) => {
-    alert(msg);
+    toast.error(msg);
     refs[refName].current?.focus();
   };
 
   const handleSignUpClick = async (e) => {
     e.preventDefault();
 
-    if (!firstName.trim()) return showToastAndFocus("이름을 입력해주세요.", "firstName");
-    if (!lastName.trim()) return showToastAndFocus("성을 입력해주세요.", "lastName");
-    if (!email.trim()) return showToastAndFocus("이메일을 입력해주세요.", "email");
-    if (!password.trim()) return showToastAndFocus("비밀번호를 입력해주세요.", "password");
-    if (!confirmPassword.trim()) return showToastAndFocus("비밀번호 확인을 입력해주세요.", "confirmPassword");
-    if (!nickname.trim()) return showToastAndFocus("닉네임을 입력해주세요.", "nickname");
-    if (!phone.trim()) return showToastAndFocus("전화번호를 입력해주세요.", "phone");
+    if (!firstName.trim()) return showToastAndFocus('이름을 입력해주세요.', 'firstName');
+    if (!lastName.trim()) return showToastAndFocus('성을 입력해주세요.', 'lastName');
+    if (!email.trim()) return showToastAndFocus('이메일을 입력해주세요.', 'email');
+    if (!password.trim()) return showToastAndFocus('비밀번호를 입력해주세요.', 'password');
+    if (!confirmPassword.trim()) return showToastAndFocus('비밀번호 확인을 입력해주세요.', 'confirmPassword');
+    if (!nickname.trim()) return showToastAndFocus('닉네임을 입력해주세요.', 'nickname');
+    if (!phone.trim()) return showToastAndFocus('전화번호를 입력해주세요.', 'phone');
 
     if (password.length < 6) {
-      setErrorMessage('패스워드의 최소길이는 6자리 입니다.');
+      setErrorMessage('비밀번호 최소 길이는 6자리 입니다.');
       refs.password.current?.focus();
       return;
     }
 
     if (password !== confirmPassword) {
-      setConfirmError('패스워드가 일치하지 않습니다.');
+      setConfirmError('비밀번호가 일치하지 않습니다.');
       refs.confirmPassword.current?.focus();
       return;
     }
@@ -94,23 +113,12 @@ const SignUpForm = () => {
     };
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert('회원가입이 완료되었습니다!');
-        window.location.href = "/login";
-      } else {
-        alert('회원가입 실패: ' + data.message);
-      }
+      await signUpMutation.mutateAsync(userData);
+      toast.success('회원가입이 완료되었습니다.');
+      navigate('/login');
     } catch (err) {
-      console.error("회원가입 에러:", err);
-      alert("서버 통신 에러");
+      console.error('회원가입 에러:', err);
+      toast.error(err.message || '서버 통신 에러');
     }
   };
 
@@ -231,14 +239,15 @@ const SignUpForm = () => {
 
       <button
         type="submit"
+        disabled={signUpMutation.isPending}
         className="w-full py-2 bg-black text-white rounded-md font-semibold hover:scale-105 transition mt-2"
       >
-        SIGN UP
+        {signUpMutation.isPending ? '가입 중...' : 'SIGN UP'}
       </button>
 
       <p className="text-sm mt-1 self-center">
         Already have an account?
-        <a href="/Login" className="text-blue-600 font-semibold ml-1">Log In</a>
+        <Link to="/login" className="text-blue-600 font-semibold ml-1">Log In</Link>
       </p>
     </form>
   );
