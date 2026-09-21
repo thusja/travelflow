@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import prisma from "../db/index.js";
 import { ERROR_CODES } from "../utils/apiResponse.js";
 import { throwServiceError } from "./serviceError.js";
+import { requireTrimmedString } from "./validationService.js";
 
 const MAX_DESTINATION_LENGTH = 100;
 const MAX_SUGGESTION_LENGTH = 2000;
@@ -47,16 +48,8 @@ export const getTravelSuggestions = async ({ status, sort }) => {
 };
 
 export const createTravelSuggestion = async ({ destination, suggestion }) => {
-  const normalizedDestination = String(destination ?? "").trim();
-  const normalizedSuggestion = String(suggestion ?? "").trim();
-
-  if (!normalizedDestination || !normalizedSuggestion) {
-    throwServiceError({
-      status: 400,
-      code: ERROR_CODES.VALIDATION_ERROR,
-      message: "destination, suggestion은 필수입니다.",
-    });
-  }
+  const normalizedDestination = requireTrimmedString(destination, "destination");
+  const normalizedSuggestion = requireTrimmedString(suggestion, "suggestion");
 
   if (normalizedDestination.length > MAX_DESTINATION_LENGTH) {
     throwServiceError({

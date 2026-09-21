@@ -3,6 +3,12 @@ import prisma from "../db/index.js";
 import { createErrorBody, ERROR_CODES } from "../utils/apiResponse.js";
 import { invalidateCacheByPrefixes } from "../utils/cacheStore.js";
 import { throwServiceError } from "./serviceError.js";
+import {
+  createRequestHash,
+  finalizeIdempotency,
+  startIdempotency,
+} from "./idempotencyService.js";
+import { requireTrimmedString } from "./validationService.js";
 
 export const getPointAndCoupons = async ({ userId }) => {
   await prisma.userCoupon.updateMany({
@@ -70,19 +76,16 @@ export const getPointAndCoupons = async ({ userId }) => {
 };
 
 export const registerCoupon = async ({ userId, code, idempotencyKey }) => {
+  const normalizedCode = requireTrimmedString(code, "code");
   let idempotencyRecord = null;
 
   const finalize = async (statusCode, body, state = "completed") => {
-    if (idempotencyRecord) {
-      await prisma.idempotencyRequest.update({
-        where: { id: idempotencyRecord.id },
-        data: {
-          state,
-          statusCode,
-          responseBody: body,
-        },
-      });
-    }
+    await finalizeIdempotency({
+      record: idempotencyRecord,
+      statusCode,
+      body,
+      state,
+    });
 
     if (statusCode >= 400) {
       throwServiceError({
@@ -97,81 +100,32 @@ export const registerCoupon = async ({ userId, code, idempotencyKey }) => {
   };
 
   if (idempotencyKey && typeof idempotencyKey === "string") {
-    const key = idempotencyKey.trim();
-    const path = "/api/points/register";
-    const method = "POST";
-    const requestHash = crypto
-      .createHash("sha256")
-      .update(JSON.stringify({ code: code ?? null }))
-      .digest("hex");
+    const requestHash = createRequestHash({ code: normalizedCode });
+    const idemResult = await startIdempotency({
+      userId,
+      idempotencyKey,
+      method: "POST",
+      path: "/api/points/register",
+      requestHash,
+    });
 
-    try {
-      idempotencyRecord = await prisma.idempotencyRequest.create({
-        data: {
-          id: crypto.randomUUID(),
-          userId,
-          idempotencyKey: key,
-          method,
-          path,
-          requestHash,
-        },
-      });
-    } catch {
-      const existing = await prisma.idempotencyRequest.findFirst({
-        where: {
-          userId,
-          idempotencyKey: key,
-          method,
-          path,
-        },
-      });
-
-      if (!existing) {
+    if (idemResult.replayResponse) {
+      if (idemResult.replayResponse.statusCode >= 400) {
         return finalize(
-          409,
-          createErrorBody({
-            code: ERROR_CODES.CONFLICT_DUPLICATE,
-            message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
-          }),
+          idemResult.replayResponse.statusCode,
+          idemResult.replayResponse.body,
           "failed",
         );
       }
-
-      if (existing.requestHash !== requestHash) {
-        return finalize(
-          409,
-          createErrorBody({
-            code: ERROR_CODES.CONFLICT_DUPLICATE,
-            message: "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
-          }),
-          "failed",
-        );
-      }
-
-      if (
-        (existing.state === "completed" || existing.state === "failed") &&
-        existing.responseBody
-      ) {
-        if ((existing.statusCode || 200) >= 400) {
-          return finalize(existing.statusCode || 200, existing.responseBody, existing.state);
-        }
-        return existing.responseBody;
-      }
-
-      return finalize(
-        409,
-        createErrorBody({
-          code: ERROR_CODES.CONFLICT_DUPLICATE,
-          message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
-        }),
-        "failed",
-      );
+      return idemResult.replayResponse.body;
     }
+
+    idempotencyRecord = idemResult.record;
   }
 
   const coupon = await prisma.coupon.findFirst({
     where: {
-      code,
+      code: normalizedCode,
       expireAt: { gt: new Date() },
     },
   });
@@ -219,16 +173,12 @@ export const registerCoupon = async ({ userId, code, idempotencyKey }) => {
   await invalidateCacheByPrefixes(["catalog:packages:"]);
 
   const response = { message: "쿠폰이 등록되었습니다." };
-  if (idempotencyRecord) {
-    await prisma.idempotencyRequest.update({
-      where: { id: idempotencyRecord.id },
-      data: {
-        state: "completed",
-        statusCode: 200,
-        responseBody: response,
-      },
-    });
-  }
+  await finalizeIdempotency({
+    record: idempotencyRecord,
+    statusCode: 200,
+    body: response,
+    state: "completed",
+  });
 
   return response;
 };

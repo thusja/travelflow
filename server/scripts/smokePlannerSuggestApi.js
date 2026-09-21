@@ -21,11 +21,24 @@ const assertEqual = (label, expected, actual) => {
 
 const requestJson = async (path, options = {}) => {
   const response = await fetch(`${BASE_URL}${path}`, options);
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw new Error(
       `${path} failed (${response.status}): ${JSON.stringify(data)}`,
+    );
+  }
+
+  return data;
+};
+
+const requestJsonExpectStatus = async (path, expectedStatus, options = {}) => {
+  const response = await fetch(`${BASE_URL}${path}`, options);
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status !== expectedStatus) {
+    throw new Error(
+      `${path} expected status ${expectedStatus} but got ${response.status}: ${JSON.stringify(data)}`,
     );
   }
 
@@ -52,6 +65,36 @@ const main = async () => {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(plannerPutPayload),
+  });
+
+  await requestJsonExpectStatus("/api/planner", 400, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      destination: " ",
+      travelDate: "2026-07-01",
+      memo: "스모크",
+    }),
+  });
+
+  await requestJsonExpectStatus("/api/planner", 400, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      destination: "A".repeat(101),
+      travelDate: "2026-07-01",
+      memo: "스모크",
+    }),
+  });
+
+  await requestJsonExpectStatus(`/api/planner/${plannerPost.plan.id}`, 400, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      destination: "오사카",
+      travelDate: "invalid-date",
+      memo: "업데이트",
+    }),
   });
 
   const plannerAfterUpdate = await requestJson("/api/planner");
@@ -83,14 +126,44 @@ const main = async () => {
     },
   );
 
+  await requestJsonExpectStatus("/api/suggestions", 400, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      destination: "부산",
+      suggestion: " ",
+    }),
+  });
+
+  await requestJsonExpectStatus("/api/suggestions", 400, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      destination: "B".repeat(101),
+      suggestion: "야간 코스",
+    }),
+  });
+
+  await requestJsonExpectStatus(
+    `/api/suggestions/${suggestionPost.suggestion.id}/status`,
+    400,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "invalid" }),
+    },
+  );
+
   const suggestionList = await requestJson("/api/suggestions");
   const suggestionTop = suggestionList[0];
   const reviewedSuggestions = await requestJson(
     "/api/suggestions?status=reviewed",
   );
+  await requestJsonExpectStatus("/api/suggestions?status=bad", 400);
   const oldestSuggestions = await requestJson(
     "/api/suggestions?status=reviewed&sort=oldest",
   );
+  await requestJsonExpectStatus("/api/suggestions?sort=bad", 400);
 
   assertEqual(
     "planner.destination",
@@ -193,8 +266,10 @@ const main = async () => {
 
   console.log("[smoke] plannerPostId=" + plannerPost.plan.id);
   console.log("[smoke] plannerUpdateDelete=PASS");
+  console.log("[smoke] plannerValidation=PASS");
   console.log("[smoke] suggestionPostId=" + suggestionPost.suggestion.id);
   console.log("[smoke] suggestionStatusPatch=PASS");
+  console.log("[smoke] suggestionValidation=PASS");
   console.log("[smoke] suggestionStatusFilter=PASS");
   console.log("[smoke] suggestionSort=PASS");
   console.log("[smoke] suggestionDelete=PASS");

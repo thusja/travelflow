@@ -1,10 +1,12 @@
 import prisma from "../db/index.js";
 import { buildCacheKey } from "../utils/cacheKey.js";
 import { getCache, setCache } from "../utils/cacheStore.js";
+import { normalizeOptionalTrimmedString } from "./validationService.js";
 
 const PACKAGES_CACHE_TTL_SECONDS = Number(
   process.env.CACHE_TTL_PACKAGES_SECONDS || 120,
 );
+const MAX_PACKAGE_FILTER_LENGTH = 100;
 
 const toPackageResponse = (pkg) => ({
   id: pkg.id,
@@ -19,8 +21,14 @@ const toPackageResponse = (pkg) => ({
 });
 
 export const getPackages = async ({ filter, sort, page, size, skip, take, hasList, sortInfo }) => {
-  const cacheKey = buildCacheKey("catalog", "packages", {
+  const normalizedFilter = normalizeOptionalTrimmedString(
     filter,
+    "filter",
+    MAX_PACKAGE_FILTER_LENGTH,
+  );
+
+  const cacheKey = buildCacheKey("catalog", "packages", {
+    filter: normalizedFilter,
     sort: sort || "",
     page,
     size,
@@ -36,11 +44,11 @@ export const getPackages = async ({ filter, sort, page, size, skip, take, hasLis
   }
 
   const where =
-    filter && typeof filter === "string"
+    normalizedFilter
       ? {
           OR: [
-            { title: { contains: filter, mode: "insensitive" } },
-            { description: { contains: filter, mode: "insensitive" } },
+            { title: { contains: normalizedFilter, mode: "insensitive" } },
+            { description: { contains: normalizedFilter, mode: "insensitive" } },
           ],
         }
       : undefined;

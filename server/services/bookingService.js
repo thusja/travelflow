@@ -3,99 +3,12 @@ import prisma from "../db/index.js";
 import { createErrorBody, ERROR_CODES } from "../utils/apiResponse.js";
 import { invalidateCacheByPrefixes } from "../utils/cacheStore.js";
 import { ServiceError, throwServiceError } from "./serviceError.js";
-
-const startIdempotency = async ({
-  userId,
-  idempotencyKey,
-  method,
-  path,
-  requestHash,
-}) => {
-  if (!idempotencyKey || typeof idempotencyKey !== "string") {
-    return { record: null, replayResponse: null };
-  }
-
-  const key = idempotencyKey.trim();
-  if (!key) {
-    return { record: null, replayResponse: null };
-  }
-
-  try {
-    const record = await prisma.idempotencyRequest.create({
-      data: {
-        id: crypto.randomUUID(),
-        userId,
-        idempotencyKey: key,
-        method,
-        path,
-        requestHash,
-      },
-    });
-
-    return { record, replayResponse: null };
-  } catch {
-    const existing = await prisma.idempotencyRequest.findFirst({
-      where: {
-        userId,
-        idempotencyKey: key,
-        method,
-        path,
-      },
-    });
-
-    if (!existing) {
-      throwServiceError({
-        status: 409,
-        code: ERROR_CODES.CONFLICT_DUPLICATE,
-        message: "멱등성 처리 중 충돌이 발생했습니다. 다시 시도해주세요.",
-      });
-    }
-
-    if (existing.requestHash !== requestHash) {
-      throwServiceError({
-        status: 409,
-        code: ERROR_CODES.CONFLICT_DUPLICATE,
-        message: "동일한 Idempotency-Key로 다른 요청 본문을 보낼 수 없습니다.",
-      });
-    }
-
-    if (
-      (existing.state === "completed" || existing.state === "failed") &&
-      existing.responseBody
-    ) {
-      return {
-        record: null,
-        replayResponse: {
-          statusCode: existing.statusCode || 200,
-          body: existing.responseBody,
-        },
-      };
-    }
-
-    throwServiceError({
-      status: 409,
-      code: ERROR_CODES.CONFLICT_DUPLICATE,
-      message: "동일 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
-    });
-  }
-};
-
-const finalizeIdempotency = async ({ record, statusCode, body, state }) => {
-  if (!record) {
-    return;
-  }
-
-  await prisma.idempotencyRequest
-    .update({
-      where: { id: record.id },
-      data: {
-        state,
-        statusCode,
-        responseBody: body,
-      },
-    })
-    .catch(() => undefined);
-};
+import {
+  createRequestHash,
+  finalizeIdempotency,
+  startIdempotency,
+} from "./idempotencyService.js";
+import { requireTrimmedString, requireValidDate } from "./validationService.js";
 
 const toBookingItem = (row) => ({
   id: row.id,
@@ -214,35 +127,16 @@ export const getUserBookingDetail = async ({ userId, id }) => {
 };
 
 export const createBooking = async ({ userId, idempotencyKey, packageId, bookingDate }) => {
-  if (!packageId || !bookingDate) {
-    throwServiceError({
-      status: 400,
-      code: ERROR_CODES.VALIDATION_ERROR,
-      message: "packageId와 bookingDate가 필요합니다.",
-    });
-  }
-
-  const normalizedBookingDate = new Date(bookingDate);
-  if (Number.isNaN(normalizedBookingDate.getTime())) {
-    throwServiceError({
-      status: 400,
-      code: ERROR_CODES.VALIDATION_ERROR,
-      message: "유효하지 않은 bookingDate 입니다.",
-    });
-  }
+  const normalizedPackageId = requireTrimmedString(packageId, "packageId");
+  const normalizedBookingDate = requireValidDate(bookingDate, "bookingDate");
 
   let idempotencyRecord = null;
 
   try {
-    const requestHash = crypto
-      .createHash("sha256")
-      .update(
-        JSON.stringify({
-          packageId,
-          bookingDate: normalizedBookingDate.toISOString().slice(0, 10),
-        }),
-      )
-      .digest("hex");
+    const requestHash = createRequestHash({
+      packageId,
+      bookingDate: normalizedBookingDate.toISOString().slice(0, 10),
+    });
 
     const idemResult = await startIdempotency({
       userId,
@@ -259,7 +153,7 @@ export const createBooking = async ({ userId, idempotencyKey, packageId, booking
     idempotencyRecord = idemResult.record;
 
     const pkg = await prisma.package.findUnique({
-      where: { id: packageId },
+      where: { id: normalizedPackageId },
       select: { id: true },
     });
 
@@ -283,7 +177,7 @@ export const createBooking = async ({ userId, idempotencyKey, packageId, booking
       data: {
         id: crypto.randomUUID(),
         userId,
-        packageId,
+        packageId: normalizedPackageId,
         bookingDate: normalizedBookingDate,
         status: "confirmed",
       },
@@ -355,10 +249,7 @@ export const cancelBooking = async ({ userId, id, reason, idempotencyKey }) => {
   let idempotencyRecord = null;
 
   try {
-    const requestHash = crypto
-      .createHash("sha256")
-      .update(JSON.stringify({ bookingId: id, reason: reason || null }))
-      .digest("hex");
+    const requestHash = createRequestHash({ bookingId: id, reason: reason || null });
 
     const idemResult = await startIdempotency({
       userId,

@@ -2,21 +2,15 @@ import { v4 as uuidv4 } from "uuid";
 import prisma from "../db/index.js";
 import { ERROR_CODES } from "../utils/apiResponse.js";
 import { throwServiceError } from "./serviceError.js";
+import { requireTrimmedString, requireValidDate } from "./validationService.js";
 
 const MAX_DESTINATION_LENGTH = 100;
 const MAX_MEMO_LENGTH = 2000;
 
 const validatePlannerPayload = ({ destination, travelDate, memo }) => {
-  const normalizedDestination = String(destination ?? "").trim();
-  const normalizedMemo = String(memo ?? "").trim();
-
-  if (!normalizedDestination || !travelDate || !normalizedMemo) {
-    throwServiceError({
-      status: 400,
-      code: ERROR_CODES.VALIDATION_ERROR,
-      message: "destination, travelDate, memo는 필수입니다.",
-    });
-  }
+  const normalizedDestination = requireTrimmedString(destination, "destination");
+  const normalizedMemo = requireTrimmedString(memo, "memo");
+  const normalizedDate = requireValidDate(travelDate, "travelDate");
 
   if (normalizedDestination.length > MAX_DESTINATION_LENGTH) {
     throwServiceError({
@@ -31,15 +25,6 @@ const validatePlannerPayload = ({ destination, travelDate, memo }) => {
       status: 400,
       code: ERROR_CODES.VALIDATION_ERROR,
       message: `memo는 ${MAX_MEMO_LENGTH}자 이하여야 합니다.`,
-    });
-  }
-
-  const normalizedDate = new Date(travelDate);
-  if (Number.isNaN(normalizedDate.getTime())) {
-    throwServiceError({
-      status: 400,
-      code: ERROR_CODES.VALIDATION_ERROR,
-      message: "유효하지 않은 travelDate 입니다.",
     });
   }
 
