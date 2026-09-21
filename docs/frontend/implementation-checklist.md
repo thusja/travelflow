@@ -45,3 +45,12 @@
 - [ ] API 계약 변경 시 상위 `docs/api-spec.md` 갱신
 - [ ] 페이지 구조 변경 시 `page-spec.md` 갱신
 - [ ] UI 규칙 변경 시 `ui-system.md` 갱신
+
+## 진행 메모 (2026-09-13)
+
+- 완료: 보호 라우트 Outlet 구조 전환 (`App.jsx`)
+- 완료: 주요 프로필/예약 화면 Query/Mutation 패턴 통일
+- 완료: 인증 폼 Login/SignUp mutation 전환 및 중복 제출 방지
+- 완료: `AuthContext` 초기 세션 복원 시 `/api/users/me` 동기화
+- 완료: 공통 토스트 시스템 도입 및 주요 사용자 알림 alert 제거
+- 완료: 컴포넌트 계층 fetch 직접 호출 제거 (`requestApi` 통일)

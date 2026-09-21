@@ -6,7 +6,7 @@
 
 ## 2. 기본 원칙
 
-- 모든 네트워크 요청은 `utils/httpClient` 또는 동일 정책 래퍼를 통해 호출
+- 모든 네트워크 요청은 `utils/request.js`의 `requestApi` 또는 동일 정책 래퍼를 통해 호출
 - 인증 토큰 주입, 401 refresh 재시도, 실패 시 공통 로그아웃 흐름을 유지
 - 컴포넌트 내부에서 직접 `fetch`를 남발하지 않는다.
 
@@ -24,6 +24,10 @@
 
 - `['packages', 'list', params]`
 - `['bookings', 'list', params]`
+- `['reviews', 'reviewable', params]`
+- `['points', 'summary']`
+- `['coupons', 'list', params]`
+- `['users', 'logs', params]`
 - `['planner', 'list', params]`
 - `['suggestions', 'list', params]`
 

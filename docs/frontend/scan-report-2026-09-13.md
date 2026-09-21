@@ -64,3 +64,20 @@
 - 베이스 URL 하드코딩: `client/src/components/**`, `client/src/utils/api.js`, `client/src/utils/httpClient.js`
 - 로그인 이동 패턴: `client/src/pages/LoginPage.jsx`
 - 수동 데이터 처리 대표: `client/src/components/Profiles/myBookings/Points.jsx`
+
+## 진행 현황 업데이트 (2026-09-13)
+
+완료:
+
+- P0-1 완료: 클라이언트 API 호출의 하드코딩 베이스 URL을 `/api` 상대 경로로 통일
+- P0-2 완료: `App.jsx` 보호 라우트를 Outlet 기반 중첩 라우팅으로 재구성
+- P1-1 완료: 로그인/회원가입 이동을 `useNavigate`/`Link` 기반으로 통일
+- P1-2 완료: `Points.jsx`를 Query/Mutation 패턴으로 전환
+- 추가 완료: `Review.jsx`, `ReviewForm.jsx`, `Logs.jsx`, `ProfileEdit.jsx`, `Withdraw.jsx`, `Notifications.jsx`, `LoginForm.jsx`, `SignUpForm.jsx`도 mutation/query 패턴으로 확장
+- 추가 완료: `AuthContext` 초기 복원 시 `/api/users/me` 동기화로 세션 유효성 검증
+
+잔여:
+
+- 컴포넌트 계층의 fetch 직접 호출 제거 완료
+- 공통 알림 UX를 토스트 컴포넌트 기반으로 통일 완료
+- 내부 인프라 fetch는 `utils/request.js`, `utils/httpClient.js`에만 유지
